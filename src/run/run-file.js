@@ -2,6 +2,8 @@
 const state = require('../state');
 const { Suite } = require('../collect/suite');
 const { loadModule } = require('../loader');
+const { packagesReached } = require('../modules/mock-order');
+const { resolveKey } = require('../modules/registry');
 const { releaseMocks } = require('../mock');
 const { timers, realTimers } = require('../timers');
 const { FileRunner } = require('./file-runner');
@@ -30,7 +32,13 @@ function createFileState(path) {
 // Loads the setup files and the test file, which registers its suites and tests.
 async function collect(file, config) {
   state.suite = file.root;
-  (state.dependencyHooks ?? []).forEach(({ kind, fn, timeout }) => file.root.hooks[kind].push({ fn, timeout }));
+  const hooks = state.dependencyHooks ?? [];
+  if (hooks.length > 0) {
+    const imported = packagesReached([...(config.setupFiles ?? []), file.path], resolveKey);
+    hooks
+      .filter(({ dependency }) => imported.has(dependency))
+      .forEach(({ kind, fn, timeout }) => file.root.hooks[kind].push({ fn, timeout }));
+  }
   try {
     const setupFiles = config.setupFiles ?? [];
     for (let i = 0; i < setupFiles.length; i += 1) {

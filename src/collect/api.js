@@ -137,20 +137,30 @@ const test = createApi(registerTest, {});
 
 const RUNTIME_DIR = path.dirname(__dirname);
 
-// Whether the code calling into vynta now lives in node_modules (the first frame outside vynta's own).
-function calledFromDependency() {
+const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
+
+// The package whose code is calling into vynta now (the first frame outside vynta's own), if the
+// caller lives in node_modules.
+function callingPackage() {
   const frames = (new Error().stack ?? '').split('\n').slice(1);
   const caller = frames.find((frame) => /[\\/]/.test(frame) && !frame.includes(RUNTIME_DIR));
-  return Boolean(caller?.includes(`${path.sep}node_modules${path.sep}`));
+  const index = caller?.lastIndexOf(NODE_MODULES) ?? -1;
+  if (index === -1) {
+    return null;
+  }
+  const parts = caller.slice(index + NODE_MODULES.length).split(/[\\/]/);
+  return parts.slice(0, parts[0].startsWith('@') ? 2 : 1).join('/');
 }
 
 // A library that registers a root hook as it loads (user-event's clipboard reset, Testing Library's
-// cleanup) loads once per thread here, not once per file: the hook is kept and given to every file.
+// cleanup) loads once per thread here, not once per file: the hook is kept and given to every later
+// file that imports the library, as a fresh load would.
 const hook = (kind) => (fn, timeout) => {
   const suite = currentSuite(kind);
   suite.hooks[kind].push({ fn, timeout });
-  if (suite === state.file?.root && calledFromDependency()) {
-    state.dependencyHooks = [...(state.dependencyHooks ?? []), { kind, fn, timeout }];
+  const dependency = suite === state.file?.root ? callingPackage() : null;
+  if (dependency) {
+    state.dependencyHooks = [...(state.dependencyHooks ?? []), { kind, fn, timeout, dependency }];
   }
 };
 

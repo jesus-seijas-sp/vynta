@@ -71,4 +71,31 @@ function orderMocks(entries, lookup, resolve) {
   return ordered;
 }
 
-module.exports = { orderMocks };
+const packageOf = (specifier) =>
+  specifier
+    .split('/')
+    .slice(0, specifier.startsWith('@') ? 2 : 1)
+    .join('/');
+
+// The packages a set of files imports, directly or through the project's other files.
+function packagesReached(starts, resolve) {
+  const packages = new Set();
+  const seen = new Set(starts);
+  const pending = [...starts];
+  while (pending.length > 0) {
+    const file = pending.pop();
+    specifiersOf(file).forEach((specifier) => {
+      if (!specifier.startsWith('.') && !path.isAbsolute(specifier) && !specifier.startsWith('node:')) {
+        packages.add(packageOf(specifier));
+      }
+      const key = resolve(specifier, file);
+      if (isProjectFile(key) && !seen.has(key)) {
+        seen.add(key);
+        pending.push(key);
+      }
+    });
+  }
+  return packages;
+}
+
+module.exports = { orderMocks, packagesReached };
