@@ -139,7 +139,10 @@ async function main(argv = process.argv.slice(2)) {
     runner = new InlineRunner({ config, onResult });
   } else {
     // The config crosses to the workers by structured clone: no functions.
-    const workerConfig = Object.fromEntries(Object.entries(config).filter(([, value]) => typeof value !== 'function'));
+    // Plugins hold functions too: each worker loads them from the config file.
+    const workerConfig = Object.fromEntries(
+      Object.entries(config).filter(([key, value]) => typeof value !== 'function' && key !== 'plugins')
+    );
     runner = new WorkerPool({ size: workers, config: workerConfig, onResult });
   }
   const collected = await runner.run(jobs);

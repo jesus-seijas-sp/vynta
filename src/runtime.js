@@ -11,6 +11,7 @@ const { ResolveCache } = require('./resolve-cache');
 const { releaseStubs } = require('./vi');
 const { install: installEnvironment, teardown: teardownEnvironment, environmentOf } = require('./environment');
 const globalSnapshot = require('./global-snapshot');
+const { loadPlugins } = require('./plugins');
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug', 'trace', 'dir'];
 
@@ -83,6 +84,7 @@ async function createRuntime(config) {
   captureConsole(config.silent);
   catchUncaught();
   shimProcessSend();
+  await loadPlugins(config);
   const pristine = globalSnapshot.snapshot();
   installEnvironment(config);
   let installed = config.environment ?? 'node';

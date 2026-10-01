@@ -54,6 +54,8 @@ const DEFAULTS = {
   environmentOptions: undefined,
   // Set false to load files as they are, even when they need JSX compiled away.
   transform: undefined,
+  // Vite plugins whose transform hooks rewrite the project's source (synchronous hooks only).
+  plugins: [],
   // Jest's moduleNameMapper: { '<regex>': '<rootDir>/path/$1' }, for the aliases a bundler would resolve.
   moduleNameMapper: undefined,
   // The extensions tried for an import that names no file, in order, as a bundler does.
@@ -138,11 +140,16 @@ function fromJestConfig(jest, rootDir) {
   return config;
 }
 
-async function findConfig(rootDir, explicit) {
+// The vynta config file in use, if there is one (not a package.json or Jest config).
+function configFileOf(rootDir, explicit) {
   if (explicit) {
-    return importConfig(path.resolve(rootDir, explicit));
+    return path.resolve(rootDir, explicit);
   }
-  const own = CONFIG_FILES.map((name) => path.join(rootDir, name)).find((file) => fs.existsSync(file));
+  return CONFIG_FILES.map((name) => path.join(rootDir, name)).find((file) => fs.existsSync(file)) ?? null;
+}
+
+async function findConfig(rootDir, explicit) {
+  const own = configFileOf(rootDir, explicit);
   if (own) {
     return importConfig(own);
   }
@@ -176,10 +183,16 @@ function coverageFilter(globs, rootDir) {
 async function loadConfig(cliOptions) {
   const rootDir = path.resolve(cliOptions.rootDir ?? process.cwd());
   const fileConfig = await findConfig(rootDir, cliOptions.config);
-  const config = { ...DEFAULTS, ...fileConfig, ...cliOptions, rootDir };
+  const config = {
+    ...DEFAULTS,
+    ...fileConfig,
+    ...cliOptions,
+    rootDir,
+    configFile: configFileOf(rootDir, cliOptions.config),
+  };
   config.setupFiles = config.setupFiles.map((file) => path.resolve(rootDir, file));
   config.coverageInclude = coverageFilter(config.collectCoverageFrom, rootDir);
   return config;
 }
 
-module.exports = { loadConfig, DEFAULTS };
+module.exports = { loadConfig, importConfig, DEFAULTS };

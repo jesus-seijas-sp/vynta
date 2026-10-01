@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { applyPlugins } = require('./plugins');
 const Module = require('node:module');
 const { expand: expandGlobImports } = require('./glob-imports');
 
@@ -180,7 +181,7 @@ function withPaths(code) {
 
 // The source with JSX (and any types) compiled away, or null when the project has no transformer.
 function compile(rawSource, file) {
-  const source = expandGlobImports(rawSource, file);
+  const source = expandGlobImports(applyPlugins(rawSource, file), file);
   const { name, module: transformer } = findTransformer();
   if (!name) {
     return null;
