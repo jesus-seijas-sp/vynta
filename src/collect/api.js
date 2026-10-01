@@ -1,3 +1,4 @@
+const path = require('node:path');
 const state = require('../state');
 const { formatTitle, normalizeTable } = require('./each');
 const { Suite } = require('./suite');
@@ -134,8 +135,23 @@ function createApi(register, flags) {
 const describe = createApi(registerSuite, {});
 const test = createApi(registerTest, {});
 
+const RUNTIME_DIR = path.dirname(__dirname);
+
+// Whether the code calling into vynta now lives in node_modules (the first frame outside vynta's own).
+function calledFromDependency() {
+  const frames = (new Error().stack ?? '').split('\n').slice(1);
+  const caller = frames.find((frame) => /[\\/]/.test(frame) && !frame.includes(RUNTIME_DIR));
+  return Boolean(caller?.includes(`${path.sep}node_modules${path.sep}`));
+}
+
+// A library that registers a root hook as it loads (user-event's clipboard reset, Testing Library's
+// cleanup) loads once per thread here, not once per file: the hook is kept and given to every file.
 const hook = (kind) => (fn, timeout) => {
-  currentSuite(kind).hooks[kind].push({ fn, timeout });
+  const suite = currentSuite(kind);
+  suite.hooks[kind].push({ fn, timeout });
+  if (suite === state.file?.root && calledFromDependency()) {
+    state.dependencyHooks = [...(state.dependencyHooks ?? []), { kind, fn, timeout }];
+  }
 };
 
 function currentTest(kind) {

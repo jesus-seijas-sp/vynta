@@ -30,6 +30,7 @@ function createFileState(path) {
 // Loads the setup files and the test file, which registers its suites and tests.
 async function collect(file, config) {
   state.suite = file.root;
+  (state.dependencyHooks ?? []).forEach(({ kind, fn, timeout }) => file.root.hooks[kind].push({ fn, timeout }));
   try {
     const setupFiles = config.setupFiles ?? [];
     for (let i = 0; i < setupFiles.length; i += 1) {

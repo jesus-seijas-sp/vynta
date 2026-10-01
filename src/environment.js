@@ -238,6 +238,18 @@ function populate(window, name) {
   return { keys, originals };
 }
 
+function ownDescriptors(target) {
+  return new Map(Reflect.ownKeys(target).map((key) => [key, Reflect.getOwnPropertyDescriptor(target, key)]));
+}
+
+// What a file defined on the navigator (a clipboard, a getUserMedia double) goes with it.
+function restoreOwn(target, descriptors) {
+  Reflect.ownKeys(target)
+    .filter((key) => !descriptors.has(key))
+    .forEach((key) => Reflect.deleteProperty(target, key));
+  descriptors.forEach((descriptor, key) => Reflect.defineProperty(target, key, descriptor));
+}
+
 // One window per environment and thread, made the first time a file asks for it.
 const created = new Map();
 
@@ -249,7 +261,7 @@ function install(config = {}) {
   const url = config.environmentUrl ?? 'http://localhost:3000/';
   if (!created.has(name)) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
-    created.set(name, { name, url, window });
+    created.set(name, { name, url, window, navigator: ownDescriptors(window.navigator) });
   }
   current = { ...created.get(name), ...populate(created.get(name).window, name) };
   return current;
@@ -282,8 +294,11 @@ function clearCookies(document) {
 
 // The window outlives a test file: libraries loaded once per thread (Testing Library's `screen`)
 // hold its document. What a file put in it goes, so the next one starts as a new page would.
-function clearPage(window, url) {
+function clearPage(window, url, navigator) {
   const { document } = window;
+  if (navigator) {
+    restoreOwn(window.navigator, navigator);
+  }
   clearCookies(document);
   window.localStorage?.clear();
   window.sessionStorage?.clear();
@@ -310,7 +325,7 @@ function teardown() {
   if (!current) {
     return;
   }
-  const { window, url, keys, originals } = current;
+  const { window, url, keys, originals, navigator } = current;
   current = null;
   [...keys, ...SELF_REFERENCES].forEach((key) => {
     const original = originals.get(key);
@@ -320,7 +335,7 @@ function teardown() {
       Reflect.deleteProperty(globalThis, key);
     }
   });
-  clearPage(window, url);
+  clearPage(window, url, navigator);
 }
 
 module.exports = { install, teardown, environmentOf };
