@@ -1,7 +1,7 @@
 const state = require('../state');
 const { matcherError, printDiffOrStringify, printReceived } = require('../expect/context');
 const { subsetEquals } = require('../expect/equals');
-const { userFrames } = require('../utils/stack');
+const { userFrames, samePath } = require('../utils/stack');
 const { stripIndentation } = require('./inline-snapshots');
 const { serializers } = require('./serializers');
 const { SnapshotState } = require('./snapshot-state');
@@ -89,7 +89,7 @@ function toMatchSnapshot(received, propertiesOrHint, maybeHint) {
 
 // Where in the test file the matcher was called, for rewriting the source.
 function callLocation(matcher) {
-  const frame = userFrames(new Error().stack).find(({ file }) => file === state.file.path);
+  const frame = userFrames(new Error().stack).find(({ file }) => samePath(file, state.file.path));
   if (!frame) {
     throw new Error(`${matcher}() must be called in the test file itself`);
   }

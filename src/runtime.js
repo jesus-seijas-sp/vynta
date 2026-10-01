@@ -9,6 +9,8 @@ const { runFile, reportUncaught } = require('./run/run-file');
 const { mocks } = require('./modules/registry');
 const { ResolveCache } = require('./resolve-cache');
 const { releaseStubs } = require('./vi');
+const { install: installEnvironment, teardown: teardownEnvironment } = require('./environment');
+const globalSnapshot = require('./global-snapshot');
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug', 'trace', 'dir'];
 
@@ -81,6 +83,8 @@ async function createRuntime(config) {
   captureConsole(config.silent);
   catchUncaught();
   shimProcessSend();
+  const pristine = globalSnapshot.snapshot();
+  installEnvironment(config);
   const coverage = config.coverage ? new CoverageCollector(config) : null;
   await coverage?.start();
   const run = async (path, shard) => {
@@ -91,6 +95,10 @@ async function createRuntime(config) {
     await coverage?.take();
     if (config.isolate !== false) {
       isolateModules();
+      // A document keeps cookies, storage and nodes, which the next file must not inherit.
+      teardownEnvironment();
+      globalSnapshot.restore(pristine);
+      installEnvironment(config);
     }
     return result;
   };

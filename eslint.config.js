@@ -716,7 +716,7 @@ module.exports = [
         'error',
         {
           // Names of Jest (mock flag) and Node.js (CommonJS resolution) APIs.
-          allow: ['_isMockFunction', '_resolveFilename', '_load', '_compile'],
+          allow: ['_isMockFunction', '_resolveFilename', '_load', '_compile', '_extensions'],
           allowAfterThis: false,
           allowAfterSuper: false,
           enforceInMethodNames: true,

@@ -36,6 +36,16 @@ const DEFAULTS = {
   coverageThreshold: undefined,
   // Files whose tests do not depend on each other, which can run in parts on several workers: true or globs.
   splitFiles: false,
+  // 'node', 'happy-dom' or 'jsdom'; the last two come from the project, not from vynta.
+  environment: 'node',
+  // The URL the document reports, which a component may read for its origin.
+  environmentUrl: undefined,
+  // Set false to load files as they are, even when they need JSX compiled away.
+  transform: undefined,
+  // Jest's moduleNameMapper: { '<regex>': '<rootDir>/path/$1' }, for the aliases a bundler would resolve.
+  moduleNameMapper: undefined,
+  // The extensions tried for an import that names no file, in order, as a bundler does.
+  moduleFileExtensions: ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'json', 'node'],
 };
 
 const CONFIG_FILES = ['vynta.config.js', 'vynta.config.cjs', 'vynta.config.mjs'];
@@ -76,6 +86,8 @@ function fromJestConfig(jest, rootDir) {
     'coverageReporters',
     'coverageThreshold',
     'collectCoverageFrom',
+    'moduleFileExtensions',
+    'testEnvironment',
   ];
   copy
     .filter((key) => jest[key] !== undefined)
@@ -84,6 +96,18 @@ function fromJestConfig(jest, rootDir) {
     });
   if (jest.collectCoverage) {
     config.coverage = true;
+  }
+  if (jest.testEnvironment) {
+    config.environment = { jsdom: 'jsdom', 'happy-dom': 'happy-dom', node: 'node' }[jest.testEnvironment] ?? 'node';
+    delete config.testEnvironment;
+  }
+  if (jest.moduleNameMapper) {
+    config.moduleNameMapper = Object.fromEntries(
+      Object.entries(jest.moduleNameMapper).map(([pattern, target]) => [
+        pattern,
+        Array.isArray(target) ? target.map((one) => resolveRootDir(one, rootDir)) : resolveRootDir(target, rootDir),
+      ])
+    );
   }
   const setupFiles = [...(jest.setupFiles ?? []), ...(jest.setupFilesAfterEnv ?? [])];
   if (setupFiles.length > 0) {

@@ -76,4 +76,27 @@ function codeFrame({ file, line, column }, context = 2) {
   return output.join('\n');
 }
 
-module.exports = { userFrames, codeFrame };
+const realPaths = new Map();
+
+// V8 names a frame's file by its real path, while the runner knows a file by the
+// path it was given. They differ whenever anything above the file is a symlink:
+// every temporary directory on macOS (/var -> /private/var), and a project
+// reached through a linked workspace. Comparing the strings alone misses those.
+function realPath(file) {
+  if (!realPaths.has(file)) {
+    let resolved = file;
+    try {
+      resolved = fs.realpathSync.native(file);
+    } catch {
+      // The file may be virtual or already gone; its own path is the best answer.
+    }
+    realPaths.set(file, resolved);
+  }
+  return realPaths.get(file);
+}
+
+function samePath(a, b) {
+  return a === b || realPath(a) === realPath(b);
+}
+
+module.exports = { userFrames, codeFrame, samePath };
