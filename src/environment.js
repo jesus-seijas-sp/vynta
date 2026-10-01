@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const { jsdomBridges } = require('./jsdom-bridges');
+const { trackListeners, releaseListeners } = require('./listeners');
 const path = require('node:path');
 const Module = require('node:module');
 
@@ -296,6 +297,8 @@ function install(config = {}) {
   const url = config.environmentUrl ?? 'http://localhost:3000/';
   if (!created.has(name)) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
+    // Before the prototypes are taken, so the restore between files keeps the tracking in place.
+    trackListeners(window);
     created.set(name, {
       name,
       url,
@@ -378,6 +381,7 @@ function teardown() {
     return;
   }
   const { window, url, keys, originals, navigator, prototypes } = current;
+  releaseListeners();
   current = null;
   [...keys, ...SELF_REFERENCES].forEach((key) => {
     const original = originals.get(key);

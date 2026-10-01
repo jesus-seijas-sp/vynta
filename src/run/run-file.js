@@ -3,6 +3,7 @@ const state = require('../state');
 const { Suite } = require('../collect/suite');
 const { loadModule } = require('../loader');
 const { packagesReached } = require('../modules/mock-order');
+const { hasDependencyListeners, reattachListeners } = require('../listeners');
 const { resolveKey } = require('../modules/registry');
 const { releaseMocks } = require('../mock');
 const { timers, realTimers } = require('../timers');
@@ -33,11 +34,12 @@ function createFileState(path) {
 async function collect(file, config) {
   state.suite = file.root;
   const hooks = state.dependencyHooks ?? [];
-  if (hooks.length > 0) {
+  if (hooks.length > 0 || hasDependencyListeners()) {
     const imported = packagesReached([...(config.setupFiles ?? []), file.path], resolveKey);
     hooks
       .filter(({ dependency }) => imported.has(dependency))
       .forEach(({ kind, fn, timeout }) => file.root.hooks[kind].push({ fn, timeout }));
+    reattachListeners(imported);
   }
   try {
     const setupFiles = config.setupFiles ?? [];

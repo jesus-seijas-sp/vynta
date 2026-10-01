@@ -182,4 +182,5 @@ module.exports = {
   afterEach: hook('afterEach'),
   onTestFinished: (fn) => currentTest('onTestFinished').onFinished.push(fn),
   onTestFailed: (fn) => currentTest('onTestFailed').onFailed.push(fn),
+  callingPackage,
 };
