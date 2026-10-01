@@ -51,6 +51,11 @@ function resolveHook(specifier, context, nextResolve) {
   if (!entry) {
     return result;
   }
+  if (entry.preparing && result.url.startsWith('file:')) {
+    // Imported again from inside its own factory, by a module the original imports (a cycle back to
+    // it): the original stands in, the same instance importOriginal() is loading.
+    return { ...result, url: `${result.url.replace(/\?.*$/, '')}?${ACTUAL}=${state.generation}`, shortCircuit: true };
+  }
   return {
     url: `${MOCK_SCHEME}${state.generation}:${encodeURIComponent(entry.key)}`,
     format: 'module',

@@ -192,6 +192,7 @@ class ModuleMocks {
       .sort((a, b) => Number(!a.factory) - Number(!b.factory));
     for (let i = 0; i < pending.length; i += 1) {
       const entry = pending[i];
+      entry.preparing = true;
       let exports;
       if (entry.factory) {
         exports = await entry.factory(() => importActual(entry));
@@ -200,7 +201,7 @@ class ModuleMocks {
         const { manual, exports: mocked } = mockWithoutFactory(entry, () => actual);
         exports = manual ? await import(pathToFileURL(manual).href) : mocked;
       }
-      Object.assign(entry, { ready: true, exports });
+      Object.assign(entry, { ready: true, preparing: false, exports });
     }
   }
 
