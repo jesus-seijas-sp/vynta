@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { jsdomBridges } = require('./jsdom-bridges');
 const path = require('node:path');
 const Module = require('node:module');
 
@@ -152,6 +153,7 @@ const SELF_REFERENCES = ['window', 'self', 'top', 'parent'];
 
 // jsdom moves a window to another origin only through the JSDOM that made it.
 const jsdoms = new WeakMap();
+const bridges = new WeakMap();
 
 // environmentOptions takes vitest's shape: { happyDOM: {...}, jsdom: {...} }, passed to the constructors.
 function createWindow(name, rootDir, url, options = {}) {
@@ -173,6 +175,7 @@ function createWindow(name, rootDir, url, options = {}) {
     url: options.jsdom?.url ?? url,
   });
   jsdoms.set(dom.window, dom);
+  bridges.set(dom.window, jsdomBridges(dom.window));
   return dom.window;
 }
 
@@ -263,7 +266,16 @@ function install(config = {}) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
     created.set(name, { name, url, window, navigator: ownDescriptors(window.navigator) });
   }
-  current = { ...created.get(name), ...populate(created.get(name).window, name) };
+  const { window } = created.get(name);
+  const populated = populate(window, name);
+  Object.entries(bridges.get(window) ?? {}).forEach(([key, value]) => {
+    if (!populated.originals.has(key)) {
+      populated.originals.set(key, Reflect.getOwnPropertyDescriptor(globalThis, key));
+    }
+    populated.keys.add(key);
+    Reflect.defineProperty(globalThis, key, { value, writable: true, configurable: true });
+  });
+  current = { ...created.get(name), ...populated };
   return current;
 }
 
