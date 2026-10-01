@@ -31,11 +31,11 @@ const OPTIONS = {
   run: { type: 'boolean' },
 };
 
-const USAGE = `Usage: vynta [options] [path patterns...]
+const USAGE = `Usage: vyntra [options] [path patterns...]
 
 Options:
   -t, --testNamePattern <regex>  Run only the tests whose full name matches
-  -c, --config <file>            Config file (default: vynta.config.js, or the Jest config)
+  -c, --config <file>            Config file (default: vyntra.config.js, or the Jest config)
   -r, --root <dir>               Project root (default: current directory)
   -w, --maxWorkers <n|n%>        Worker threads (default: cores - 1)
   -i, --runInBand                Run every file in the main thread

@@ -48,13 +48,13 @@ function loadingCaches(rootDir) {
   }
   return {
     resolveCache: { file: cacheFile(rootDir), stamp: dependencyStamp(rootDir) },
-    transformCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vynta', 'compiled'),
+    transformCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vyntra', 'compiled'),
   };
 }
 
 // Node settles the default locale of Intl as the process starts. A config that sets one (vitest
 // configs set LC_ALL so dates format the same on every machine) is only heard by a process started
-// after it, so vynta starts again with it, once. TZ needs nothing: Node reads it whenever it changes.
+// after it, so vyntra starts again with it, once. TZ needs nothing: Node reads it whenever it changes.
 const LOCALE_VARIABLES = [
   'LC_ALL',
   'LC_TIME',
@@ -66,7 +66,7 @@ const LOCALE_VARIABLES = [
   'LANG',
 ];
 const startLocale = LOCALE_VARIABLES.map((name) => process.env[name]);
-const RELAUNCHED = 'VYNTA_LOCALE_RELAUNCHED';
+const RELAUNCHED = 'VYNTRA_LOCALE_RELAUNCHED';
 
 function localeChanged() {
   return !process.env[RELAUNCHED] && LOCALE_VARIABLES.some((name, i) => process.env[name] !== startLocale[i]);
@@ -139,7 +139,7 @@ async function main(argv = process.argv.slice(2)) {
   // its own: the cache grows by a copy per file and run and is rarely read back. Measured slower than
   // compiling, so it is only kept for configs that ask (compileCache: true).
   if (config.compileCache === true) {
-    config.compileCacheDir = path.join(config.rootDir, 'node_modules', '.cache', 'vynta', 'v8');
+    config.compileCacheDir = path.join(config.rootDir, 'node_modules', '.cache', 'vyntra', 'v8');
   }
   if (inline) {
     runner = new InlineRunner({ config, onResult });

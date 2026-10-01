@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const { main } = require('../src/cli');
 
-// Output piped to a command that stops reading (vynta | head) is not an error.
+// Output piped to a command that stops reading (vyntra | head) is not an error.
 process.stdout.on('error', (error) => {
   if (error.code !== 'EPIPE') {
     throw error;

@@ -21,15 +21,15 @@ const {
 // Test files that call vi.mock() / jest.mock() get it hoisted; checked on the source, before loading them.
 const MOCK_CALL = /\b(?:vi|jest)\s*\.\s*(?:mock|unmock|hoisted)\s*\(/;
 
-// Only vynta's runtime stays loaded between files; vynta's own tests are isolated like any other project files.
+// Only vyntra's runtime stays loaded between files; vyntra's own tests are isolated like any other project files.
 const RUNTIME_DIR = `${__dirname}${path.sep}`;
 const RUNTIME_URL = `${pathToFileURL(__dirname).href}/`;
 const ENTRY_CJS = path.join(__dirname, 'index.js');
 const ENTRY_ESM = pathToFileURL(path.join(__dirname, 'index.mjs')).href;
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 
-// Imports of other test frameworks resolve to vynta, so their test files run unchanged.
-const ALIASES = new Set(['vynta', 'vitest', 'vitest/globals', '@jest/globals', '@vitest/expect']);
+// Imports of other test frameworks resolve to vyntra, so their test files run unchanged.
+const ALIASES = new Set(['vyntra', 'vitest', 'vitest/globals', '@jest/globals', '@vitest/expect']);
 
 const hooked = { cjs: false, esm: false };
 
@@ -52,7 +52,7 @@ function hookCjs() {
   hooked.cjs = true;
   // The one CommonJS resolution hook Node.js has.
   const resolveFilename = Module._resolveFilename;
-  Module._resolveFilename = function vyntaResolveFilename(request, parent, ...rest) {
+  Module._resolveFilename = function vyntraResolveFilename(request, parent, ...rest) {
     if (ALIASES.has(request)) {
       return ENTRY_CJS;
     }
@@ -85,12 +85,12 @@ function isolatedUrl(url, conditions) {
   const isolated =
     url.startsWith('file:') &&
     !url.startsWith(RUNTIME_URL) &&
-    !url.includes('vynta=') &&
+    !url.includes('vyntra=') &&
     (!url.includes('/node_modules/') || isIsolatedDependency(fileURLToPath(url)));
   if (!isolated || state.generation === 0 || !conditions.includes('import')) {
     return url;
   }
-  return `${url}${url.includes('?') ? '&' : '?'}vynta=${state.generation}`;
+  return `${url}${url.includes('?') ? '&' : '?'}vyntra=${state.generation}`;
 }
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
@@ -274,7 +274,7 @@ async function loadModule(file, config, fresh) {
   }
   if (isEsm(file)) {
     hookEsm(config);
-    const version = fresh || config.isolate !== false ? `?vynta=${state.generation}` : '';
+    const version = fresh || config.isolate !== false ? `?vyntra=${state.generation}` : '';
     return import(`${pathToFileURL(file).href}${version}`);
   }
   if (fresh) {

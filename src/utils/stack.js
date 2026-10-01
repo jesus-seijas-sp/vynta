@@ -6,7 +6,7 @@ const { colors: c } = require('../colors');
 const RUNTIME_DIR = path.join(__dirname, '..');
 const FRAME = /^\s*at (?:(.+?) \()?(.+?):(\d+):(\d+)\)?$/;
 
-// file:///C:/x.js?vynta=3 -> C:\x.js
+// file:///C:/x.js?vyntra=3 -> C:\x.js
 function toFilePath(location) {
   if (!location.startsWith('file:')) {
     return location;

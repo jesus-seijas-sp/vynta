@@ -1,6 +1,6 @@
-// The transform hooks of Vite plugins in the config, run on every file vynta compiles, so a rewrite a
+// The transform hooks of Vite plugins in the config, run on every file vyntra compiles, so a rewrite a
 // project relies on under vitest (an import split into deep paths, a barrel flattened) happens here
-// too. vynta's module hooks are synchronous, so only synchronous transforms can run. Plugins are
+// too. vyntra's module hooks are synchronous, so only synchronous transforms can run. Plugins are
 // functions, which do not cross to a worker: each thread loads them from the config file itself.
 
 const ORDER = { pre: 0, undefined: 1, post: 2 };
@@ -35,7 +35,7 @@ function applyPlugins(code, file) {
   return plugins.reduce((source, plugin) => {
     const result = plugin.transform.call(context, source, file);
     if (typeof result?.then === 'function') {
-      throw new Error(`The transform hook of the "${plugin.name}" plugin is async: vynta runs synchronous ones only`);
+      throw new Error(`The transform hook of the "${plugin.name}" plugin is async: vyntra runs synchronous ones only`);
     }
     if (result == null) {
       return source;

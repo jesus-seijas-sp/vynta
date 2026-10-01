@@ -127,12 +127,12 @@ describe('spyOn', () => {
 
 describe('stubs', () => {
   it('stubs globals and environment variables', () => {
-    vi.stubGlobal('__vyntaStub', 1);
-    vi.stubEnv('VYNTA_STUB', 'yes');
-    expect(globalThis.__vyntaStub).toBe(1); // eslint-disable-line no-underscore-dangle
-    expect(process.env.VYNTA_STUB).toBe('yes');
+    vi.stubGlobal('__vyntraStub', 1);
+    vi.stubEnv('VYNTRA_STUB', 'yes');
+    expect(globalThis.__vyntraStub).toBe(1); // eslint-disable-line no-underscore-dangle
+    expect(process.env.VYNTRA_STUB).toBe('yes');
     vi.unstubAllGlobals().unstubAllEnvs();
-    expect('__vyntaStub' in globalThis).toBe(false);
-    expect(process.env.VYNTA_STUB).toBeUndefined();
+    expect('__vyntraStub' in globalThis).toBe(false);
+    expect(process.env.VYNTRA_STUB).toBeUndefined();
   });
 });

@@ -5,7 +5,7 @@ const { callingPackage } = require('./collect/api');
 const path = require('node:path');
 const Module = require('node:module');
 
-// Tests of a browser component need a document. vynta does not ship one: it builds the window from
+// Tests of a browser component need a document. vyntra does not ship one: it builds the window from
 // the happy-dom or jsdom the project already has, once per worker, and copies its globals onto this
 // thread. A project that asks for no environment loads neither, which is why `environment: 'node'`
 // stays as fast as it was.

@@ -41,7 +41,7 @@ class Reporter {
 
   onStart(fileCount, workers) {
     const mode = this.config.pool === 'inline' ? 'inline' : `${workers} worker${workers === 1 ? '' : 's'}`;
-    this.write(`\n ${c.bold(c.cyan('VYNTA'))} ${c.dim(`running ${fileCount} test files on ${mode}`)}\n`);
+    this.write(`\n ${c.bold(c.cyan('VYNTRA'))} ${c.dim(`running ${fileCount} test files on ${mode}`)}\n`);
   }
 
   printConsole(result) {

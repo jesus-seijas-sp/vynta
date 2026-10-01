@@ -1,4 +1,6 @@
 node_modules/
+!test/fixtures/**/node_modules/
+test/fixtures/**/node_modules/.cache/
 /coverage/
 *.log
 .DS_Store

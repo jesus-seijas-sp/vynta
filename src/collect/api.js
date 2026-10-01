@@ -139,7 +139,7 @@ const RUNTIME_DIR = path.dirname(__dirname);
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 
-// The package whose code is calling into vynta now (the first frame outside vynta's own), if the
+// The package whose code is calling into vyntra now (the first frame outside vyntra's own), if the
 // caller lives in node_modules.
 function callingPackage() {
   const frames = (new Error().stack ?? '').split('\n').slice(1);

@@ -20,7 +20,7 @@ describe('hoistMocks', () => {
     const result = hoistMocks(src);
     expect(lines(result)).toBe(lines(src));
     expect(result.split('\n')[0]).toBe(
-      "'use strict'; const __vynta_vi__ = globalThis[Symbol.for('vynta.vi')]; __vynta_vi__.mock('./math', () => ({ add: __vynta_vi__.fn(() => ')'), }));"
+      "'use strict'; const __vyntra_vi__ = globalThis[Symbol.for('vyntra.vi')]; __vyntra_vi__.mock('./math', () => ({ add: __vyntra_vi__.fn(() => ')'), }));"
     );
     expect(result.split('\n')[1]).toBe("const { add } = require('./math')");
     expect(result.split('\n')[6]).toBe("it('adds', () => {});");
@@ -40,7 +40,7 @@ describe('hoistMocks', () => {
     ].join('\n');
     const result = hoistMocks(src);
     expect(result.split('\n')[0]).toBe(
-      "const __vynta_vi__ = globalThis[Symbol.for('vynta.vi')]; __vynta_vi__.hoisted(() => 'f'); const s = 'jest.mock(\"a\")';"
+      "const __vyntra_vi__ = globalThis[Symbol.for('vyntra.vi')]; __vyntra_vi__.hoisted(() => 'f'); const s = 'jest.mock(\"a\")';"
     );
     expect(result).toContain("  jest.mock('e');");
   });
@@ -55,7 +55,7 @@ describe('hoistMocks', () => {
       "vi.mock('./dep.js');",
     ].join('\n');
     expect(hoistMocks(src, { esm: true }).split('\n')).toEqual([
-      "const __vynta_vi__ = globalThis[Symbol.for('vynta.vi')]; __vynta_vi__.mock('./dep.js'); await globalThis[Symbol.for('vynta.mocks')].prepare(); const { vi } = await import('vitest');",
+      "const __vyntra_vi__ = globalThis[Symbol.for('vyntra.vi')]; __vyntra_vi__.mock('./dep.js'); await globalThis[Symbol.for('vyntra.mocks')].prepare(); const { vi } = await import('vitest');",
       "const { default: def, a: b, c } = await import('./dep.js');",
       "const ns = await import('node:path');",
       "await import('side-effect');",

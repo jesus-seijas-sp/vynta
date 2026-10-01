@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>vynta: a very fast test runner with the API of Jest and Vitest</title>
+    <title>vyntra: a very fast test runner with the API of Jest and Vitest</title>
     <meta
       name="description"
       content="Run your Jest and Vitest tests unchanged, several times faster. describe, it, expect, jest.* and vi.*, snapshots, module mocks, fake timers and coverage. Zero dependencies."
     />
-    <meta property="og:title" content="vynta: a very fast test runner with the API of Jest and Vitest" />
+    <meta property="og:title" content="vyntra: a very fast test runner with the API of Jest and Vitest" />
     <meta
       property="og:description"
       content="Your Jest and Vitest tests, unchanged, 2.7 times faster than Vitest and 5.5 times faster than Jest."
@@ -24,13 +24,13 @@
   <body>
     <header class="header">
       <div class="header-inner">
-        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <a class="logo" href="./"><span class="logo-mark">v</span>vyntra</a>
         <nav class="nav">
           <a href="guide.html">Guide</a>
           <a href="api.html">API</a>
           <a class="hide-small" href="benchmarks.html">Benchmarks</a>
           <a class="hide-small" href="migrating.html">Migrating</a>
-          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a>
           <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -47,7 +47,7 @@
             <p class="eyebrow">Test runner for Node.js</p>
             <h1>Your Jest and Vitest tests, <em>several times faster</em>.</h1>
             <p>
-              vynta runs the tests you already have, as they are: <code>describe</code>, <code>it</code>,
+              vyntra runs the tests you already have, as they are: <code>describe</code>, <code>it</code>,
               <code>expect</code>, <code>jest.*</code> and <code>vi.*</code>, snapshots, module mocks, fake timers and
               coverage. It skips the transform pipeline, keeps its workers warm and schedules the slowest files first.
               It has no dependencies.
@@ -56,8 +56,8 @@
               <a class="button primary" href="guide.html#getting-started">Get started</a>
               <a class="button" href="migrating.html">Move from Jest or Vitest</a>
             </div>
-            <button class="install" type="button" data-copy="npm install --save-dev vynta" aria-label="Copy install command">
-              <span>$</span> <b class="copy-label">npm install --save-dev vynta</b>
+            <button class="install" type="button" data-copy="npm install --save-dev vyntra" aria-label="Copy install command">
+              <span>$</span> <b class="copy-label">npm install --save-dev vyntra</b>
             </button>
           </div>
 
@@ -103,11 +103,11 @@ describe('cart', () => {
 });</code></pre>
               </div>
             </div>
-            <div class="terminal" aria-label="What vynta prints">
+            <div class="terminal" aria-label="What vyntra prints">
               <div class="terminal-bar"><span></span><span></span><span></span></div>
-              <pre><code class="nohighlight"><span class="t-dim">$</span> npx vynta
+              <pre><code class="nohighlight"><span class="t-dim">$</span> npx vyntra
 
- <span class="t-accent">VYNTA</span> <span class="t-dim">running 1 test files on inline</span>
+ <span class="t-accent">VYNTRA</span> <span class="t-dim">running 1 test files on inline</span>
 
  <span class="t-fail">❯</span> cart.test.js <span class="t-dim">(2 tests | </span><span class="t-fail">1 failed</span><span class="t-dim">)</span> <span class="t-dim">4ms</span>
    <span class="t-fail">×</span> cart &gt; is empty at first
@@ -132,7 +132,7 @@ Received: <span class="t-fail">0</span>
         <div class="container">
           <h2>How it works</h2>
           <p class="lead">
-            Nothing to rewrite: vynta understands the tests, the imports and the configuration of Jest and Vitest.
+            Nothing to rewrite: vyntra understands the tests, the imports and the configuration of Jest and Vitest.
           </p>
           <ol class="steps">
             <li class="step">
@@ -147,7 +147,7 @@ Received: <span class="t-fail">0</span>
               <span class="step-number">2</span>
               <h3>Run your tests</h3>
               <p>
-                <code>npx vynta</code> finds your test files and reads your Jest config if you have one. Globals,
+                <code>npx vyntra</code> finds your test files and reads your Jest config if you have one. Globals,
                 <code>jest.*</code>, <code>vi.*</code> and imports from <code>vitest</code> all work.
               </p>
             </li>
@@ -180,7 +180,7 @@ Received: <span class="t-fail">0</span>
             <div class="chart">
               <h3>Running the whole suite</h3>
               <p class="subtitle">39 files, 981 tests. Seconds, less is better.</p>
-              <div class="chart-row us"><span class="name">vynta</span><span class="track"><span class="fill" style="width: 18.1%;"></span></span><span class="value">0.68 s</span></div>
+              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.1%;"></span></span><span class="value">0.68 s</span></div>
               <div class="chart-row"><span class="name">Vitest 5 (no isolate)</span><span class="track"><span class="fill" style="width: 42%;"></span></span><span class="value">1.58 s</span></div>
               <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 48.7%;"></span></span><span class="value">1.83 s</span></div>
               <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">3.76 s</span></div>
@@ -188,7 +188,7 @@ Received: <span class="t-fail">0</span>
             <div class="chart">
               <h3>With coverage</h3>
               <p class="subtitle">Same suite, V8 coverage report. Seconds, less is better.</p>
-              <div class="chart-row us"><span class="name">vynta</span><span class="track"><span class="fill" style="width: 21.6%;"></span></span><span class="value">1.12 s</span></div>
+              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 21.6%;"></span></span><span class="value">1.12 s</span></div>
               <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 55.8%;"></span></span><span class="value">2.89 s</span></div>
               <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">5.18 s</span></div>
             </div>
@@ -199,13 +199,13 @@ Received: <span class="t-fail">0</span>
 
       <section class="section">
         <div class="container">
-          <h2>Why vynta</h2>
-          <p class="lead">Most of the time a test runner takes is not your tests. vynta removes that time.</p>
+          <h2>Why vyntra</h2>
+          <p class="lead">Most of the time a test runner takes is not your tests. vyntra removes that time.</p>
           <div class="features">
             <div class="feature">
               <h3>No transform pipeline</h3>
               <p>
-                Jest runs every file through Babel, Vitest through Vite. vynta loads them with Node.js itself, including
+                Jest runs every file through Babel, Vitest through Vite. vyntra loads them with Node.js itself, including
                 TypeScript. The only transform, hoisting <code>vi.mock()</code>, runs only on the files that mock.
               </p>
             </div>
@@ -219,7 +219,7 @@ Received: <span class="t-fail">0</span>
             <div class="feature">
               <h3>The slowest file first</h3>
               <p>
-                vynta remembers how long each file took, starts the slowest ones first and uses just enough workers
+                vyntra remembers how long each file took, starts the slowest ones first and uses just enough workers
                 for the slowest file to be the whole run.
               </p>
             </div>
@@ -267,7 +267,7 @@ Received: <span class="t-fail">0</span>
           <h2>Where to go next</h2>
           <div class="paths">
             <a class="path" href="guide.html#getting-started">
-              <span class="path-who">New to vynta?</span>
+              <span class="path-who">New to vyntra?</span>
               <span class="path-what">Start with the guide</span>
               <span class="path-desc">Install it, run your tests, and learn the options step by step.</span>
             </a>
@@ -293,11 +293,11 @@ Received: <span class="t-fail">0</span>
 
     <footer class="footer">
       <div class="container">
-        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>vyntra is MIT licensed. &copy; Jes&uacute;s Seijas</span>
         <span>
           <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
-          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
-          <a href="https://www.npmjs.com/package/vynta">npm</a>
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vyntra">npm</a>
         </span>
       </div>
     </footer>

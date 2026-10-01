@@ -4,9 +4,10 @@ const path = require('node:path');
 const { applyPlugins, pluginNames } = require('./plugins');
 const Module = require('node:module');
 const { expand: expandGlobImports } = require('./glob-imports');
+const { scan, CODE } = require('./modules/scanner');
 
 // Node strips TypeScript types but does not understand JSX, so a project that uses it needs a
-// transform. vynta brings none: it loads the one the project already has (esbuild, sucrase or
+// transform. vyntra brings none: it loads the one the project already has (esbuild, sucrase or
 // typescript), the first time a file needs it, and only for the files that do. A project without
 // JSX never loads a transformer and pays nothing, which is what keeps the common case fast.
 
@@ -18,6 +19,21 @@ const TS = new Set(['.ts', '.mts', '.cts']);
 // A tag opening after something that cannot end an expression: "return <a", "=> <a", "(<a", "<Foo".
 // Deliberately generous — a false positive costs one transform, a false negative costs a crash.
 const LOOKS_LIKE_JSX = /(^|[=(,:[;{}\s>?])<[A-Za-z][\w.:-]*[\s/>]|<\/[A-Za-z]|<>/;
+
+// The source with strings, templates, comments and regular expressions blanked out (line breaks kept).
+function codeOnly(source) {
+  const { kind } = scan(source);
+  const chars = new Array(source.length);
+  for (let i = 0; i < source.length; i += 1) {
+    chars[i] = kind[i] === CODE || source[i] === '\n' ? source[i] : ' ';
+  }
+  return chars.join('');
+}
+
+// A tag in the code, not in a string: HTML in the strings of a CommonJS test ('<script>' in an XSS
+// test) is not JSX, and transforming the file would turn it into an ES module without require().
+// The scan only runs when the quick check finds something that looks like a tag.
+const looksLikeJsx = (source) => LOOKS_LIKE_JSX.test(source) && LOOKS_LIKE_JSX.test(codeOnly(source));
 
 // A bundler turns these into something a module can import: a stylesheet into its class names, an
 // image into its URL. Node has no loader for them and refuses the file, which fails a component
@@ -146,7 +162,7 @@ function needsTransform(file) {
   if (!cache.has(file)) {
     let jsx = false;
     try {
-      jsx = LOOKS_LIKE_JSX.test(fs.readFileSync(file, 'utf8'));
+      jsx = looksLikeJsx(fs.readFileSync(file, 'utf8'));
     } catch {
       jsx = false;
     }
@@ -262,6 +278,7 @@ function transformerName() {
 }
 
 module.exports = {
+  looksLikeJsx,
   configure,
   needsTransform,
   transform,

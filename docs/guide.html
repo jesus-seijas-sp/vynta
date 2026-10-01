@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Guide · vynta</title>
-    <meta name="description" content="How to run and write tests with vynta: tests, assertions, mocks, module mocks, fake timers, snapshots, coverage and configuration." />
+    <title>Guide · vyntra</title>
+    <meta name="description" content="How to run and write tests with vyntra: tests, assertions, mocks, module mocks, fake timers, snapshots, coverage and configuration." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
@@ -16,13 +16,13 @@
   <body>
     <header class="header">
       <div class="header-inner">
-        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <a class="logo" href="./"><span class="logo-mark">v</span>vyntra</a>
         <nav class="nav">
           <a href="guide.html" aria-current="page">Guide</a>
           <a href="api.html">API</a>
           <a class="hide-small" href="benchmarks.html">Benchmarks</a>
           <a class="hide-small" href="migrating.html">Migrating</a>
-          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a>
           <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -69,14 +69,14 @@
       <article class="content">
         <h1>Guide</h1>
         <p class="intro">
-          vynta is a test runner for Node.js with the API of Jest and Vitest. It runs the tests written for either of
+          vyntra is a test runner for Node.js with the API of Jest and Vitest. It runs the tests written for either of
           them without changes, and it is built to be fast: it loads your files with Node.js itself, keeps its workers
           warm between files and runs the slowest files first.
         </p>
 
         <h2 id="getting-started">Getting started</h2>
         <p>Install it as a development dependency. It needs Node.js 22 or later, and nothing else.</p>
-        <pre><code class="language-bash">npm install --save-dev vynta</code></pre>
+        <pre><code class="language-bash">npm install --save-dev vyntra</code></pre>
         <p>Write a test in any file whose name ends in <code>.test.js</code> or <code>.spec.js</code> (or <code>.ts</code>, <code>.mjs</code>, <code>.cjs</code>...):</p>
         <pre><code class="language-js">// sum.test.js
 const { sum } = require('./sum');
@@ -87,10 +87,10 @@ describe('sum', () => {
   });
 });</code></pre>
         <p>And run it:</p>
-        <pre><code class="language-bash">npx vynta</code></pre>
+        <pre><code class="language-bash">npx vyntra</code></pre>
         <div class="terminal">
           <div class="terminal-bar"><span></span><span></span><span></span></div>
-          <pre><code class="nohighlight"> <span class="t-accent">VYNTA</span> <span class="t-dim">running 1 test files on inline</span>
+          <pre><code class="nohighlight"> <span class="t-accent">VYNTRA</span> <span class="t-dim">running 1 test files on inline</span>
 
  <span class="t-ok">✓</span> sum.test.js <span class="t-dim">(1 tests)</span> <span class="t-dim">2ms</span>
 
@@ -100,28 +100,28 @@ describe('sum', () => {
         </div>
         <p>
           <code>describe</code>, <code>it</code>, <code>test</code>, <code>expect</code>, the hooks, <code>vi</code> and
-          <code>jest</code> are globals. If you prefer imports, take them from <code>vynta</code>, or leave the ones from
-          <code>vitest</code> or <code>@jest/globals</code> you already have: they resolve to vynta.
+          <code>jest</code> are globals. If you prefer imports, take them from <code>vyntra</code>, or leave the ones from
+          <code>vitest</code> or <code>@jest/globals</code> you already have: they resolve to vyntra.
         </p>
-        <pre><code class="language-js">import { describe, expect, it, vi } from 'vynta';</code></pre>
+        <pre><code class="language-js">import { describe, expect, it, vi } from 'vyntra';</code></pre>
         <p>Finally, point your <code>test</code> script at it:</p>
         <pre><code class="language-json">{
   "scripts": {
-    "test": "vynta"
+    "test": "vyntra"
   }
 }</code></pre>
 
         <h2 id="running">Running tests</h2>
         <p>
-          With no arguments, vynta runs every test file of the project. Arguments filter the files by their path, as in
+          With no arguments, vyntra runs every test file of the project. Arguments filter the files by their path, as in
           Jest; <code>-t</code> filters the tests by their full name (the names of their <code>describe</code> blocks and
           their own).
         </p>
-        <pre><code class="language-bash">npx vynta                      # every test file
-npx vynta src/users            # the files whose path matches src/users
-npx vynta -t "saves the user"  # the tests whose name matches
-npx vynta --coverage           # with a coverage report
-npx vynta -u                   # update the snapshots that changed</code></pre>
+        <pre><code class="language-bash">npx vyntra                      # every test file
+npx vyntra src/users            # the files whose path matches src/users
+npx vyntra -t "saves the user"  # the tests whose name matches
+npx vyntra --coverage           # with a coverage report
+npx vyntra -u                   # update the snapshots that changed</code></pre>
         <p>A test file is any <code>*.test.*</code> or <code>*.spec.*</code> file, or any file in a <code>__tests__</code> folder, out of <code>node_modules</code>, <code>dist</code> and <code>coverage</code>.</p>
 
         <h3 id="output">What it prints</h3>
@@ -175,13 +175,13 @@ npx vynta -u                   # update the snapshots that changed</code></pre>
         <p>Every flag is in the <a href="api.html#cli">API reference</a>.</p>
 
         <h2 id="configuration">Configuration</h2>
-        <p>Most projects need none. When there is, vynta takes it from the first of these that exists:</p>
+        <p>Most projects need none. When there is, vyntra takes it from the first of these that exists:</p>
         <ol>
-          <li><code>vynta.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>), or the file given with <code>--config</code></li>
-          <li>a <code>"vynta"</code> key in <code>package.json</code></li>
+          <li><code>vyntra.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>), or the file given with <code>--config</code></li>
+          <li>a <code>"vyntra"</code> key in <code>package.json</code></li>
           <li>your Jest configuration: <code>jest.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>, <code>.json</code>), or a <code>"jest"</code> key in <code>package.json</code></li>
         </ol>
-        <pre><code class="language-js">// vynta.config.js
+        <pre><code class="language-js">// vyntra.config.js
 module.exports = {
   include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
   exclude: ['**/node_modules/**', '**/dist/**'],
@@ -191,7 +191,7 @@ module.exports = {
   coverageThreshold: { global: { lines: 90 } },
 };</code></pre>
         <p>
-          From a Jest configuration vynta takes <code>testTimeout</code>, <code>testMatch</code>,
+          From a Jest configuration vyntra takes <code>testTimeout</code>, <code>testMatch</code>,
           <code>testPathIgnorePatterns</code>, <code>roots</code>, <code>setupFiles</code>,
           <code>setupFilesAfterEnv</code>, <code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code>,
           <code>maxWorkers</code>, <code>bail</code> and the coverage options. Every option is in the
@@ -302,7 +302,7 @@ test('done callback', (done) => {
         <div class="callout">
           <p>
             A <code>.resolves</code> or <code>.rejects</code> assertion you forget to <code>await</code> still fails its
-            test: vynta waits for it before the test ends.
+            test: vyntra waits for it before the test ends.
           </p>
         </div>
 
@@ -416,7 +416,7 @@ it('sends a welcome mail', async () => {
         <ul>
           <li><strong>Keep part of the module:</strong> the factory gets <code>importOriginal</code> in ES modules; <code>jest.requireActual(path)</code> works anywhere.</li>
           <li><strong>Values for the factory:</strong> <code>vi.hoisted(() =&gt; ...)</code> runs before the mocks, so its values can be used in factories.</li>
-          <li><strong>No factory:</strong> vynta uses the file in a <code>__mocks__</code> folder next to the module (or at the root of the project, for packages), or mocks every function of the real module (automock).</li>
+          <li><strong>No factory:</strong> vyntra uses the file in a <code>__mocks__</code> folder next to the module (or at the root of the project, for packages), or mocks every function of the real module (automock).</li>
           <li><strong>Modules that do not exist:</strong> <code>jest.mock('virtual', factory, { virtual: true })</code>.</li>
           <li><strong>Not hoisted:</strong> <code>vi.doMock</code> and <code>vi.doUnmock</code> apply from where they are called.</li>
         </ul>
@@ -452,7 +452,7 @@ test('uses today', () => {
 });</code></pre>
         <p>
           The <code>Async</code> variants (<code>advanceTimersByTimeAsync</code>, <code>runAllTimersAsync</code>...) let
-          pending promises settle between one timer and the next. vynta's own timeouts always use the real clock.
+          pending promises settle between one timer and the next. vyntra's own timeouts always use the real clock.
         </p>
 
         <h2 id="snapshots">Snapshots</h2>
@@ -469,7 +469,7 @@ test('ids change, their type does not', () => {
   expect(createUser()).toMatchSnapshot({ id: expect.any(String) });
 });</code></pre>
         <p>
-          When a value changes on purpose, <code>vynta -u</code> updates the snapshots, and removes the ones no test uses when every test of the file ran.
+          When a value changes on purpose, <code>vyntra -u</code> updates the snapshots, and removes the ones no test uses when every test of the file ran.
           On CI (<code>CI</code> set, or <code>--ci</code>) new snapshots are not written: a missing snapshot fails.
           The <code>.snap</code> files of Jest and Vitest are read and written in their own format, so existing
           snapshots keep matching.
@@ -477,10 +477,10 @@ test('ids change, their type does not', () => {
 
         <h2 id="coverage">Coverage</h2>
         <p>
-          <code>vynta --coverage</code> reports which lines, functions and branches of your code the tests ran. V8 counts
+          <code>vyntra --coverage</code> reports which lines, functions and branches of your code the tests ran. V8 counts
           them as the code runs; nothing is instrumented, so the tests run nearly as fast as without coverage.
         </p>
-        <pre><code class="language-bash">npx vynta --coverage</code></pre>
+        <pre><code class="language-bash">npx vyntra --coverage</code></pre>
         <div class="terminal">
           <div class="terminal-bar"><span></span><span></span><span></span></div>
           <pre><code class="nohighlight">----------------|---------|----------|---------|---------|-------------------
@@ -508,13 +508,13 @@ src/prices.js   |   <span class="t-warn">56.52</span> |    <span class="t-ok">83
 
         <h2 id="isolation">Workers and isolation</h2>
         <p>
-          vynta runs the files in parallel, in worker threads that stay alive between files. Each file gets fresh copies
+          vyntra runs the files in parallel, in worker threads that stay alive between files. Each file gets fresh copies
           of your own modules (what it changes in them does not reach the next file), while <code>node_modules</code>
           stays loaded, which is where most of the loading time is.
         </p>
         <ul>
           <li>
-            <strong>How many workers:</strong> after the first run, vynta knows how long each file takes. It starts the
+            <strong>How many workers:</strong> after the first run, vyntra knows how long each file takes. It starts the
             slowest first, and uses just enough workers for the slowest file to be the whole run: more would only add
             startup time and compete for the cores. <code>-w</code> sets the number.
           </li>
@@ -535,22 +535,22 @@ src/prices.js   |   <span class="t-warn">56.52</span> |    <span class="t-ok">83
         <h3 id="split-files">Splitting long files</h3>
         <p>
           A run is never shorter than its slowest file. When that file's tests do not depend on each other (each one sets
-          up what it needs), vynta can run it in parts on several workers: every part loads the file, runs its hooks and
+          up what it needs), vyntra can run it in parts on several workers: every part loads the file, runs its hooks and
           one test of every few, and the results come back as one file. Allow it for those files:
         </p>
-        <pre><code class="language-js">// vynta.config.js
+        <pre><code class="language-js">// vyntra.config.js
 module.exports = {
   splitFiles: ['test/e2e/**'], // or true, for every file
 };</code></pre>
         <p>
-          vynta splits a file only when it is one of the long ones and when splitting pays: a part repeats the file's
+          vyntra splits a file only when it is one of the long ones and when splitting pays: a part repeats the file's
           setup (its <code>beforeAll</code>, the servers it starts), so files that spend most of their time in setup stay
           whole. It also leaves cores free, as tests that start servers of their own compete for them.
         </p>
 
         <h2 id="typescript">TypeScript and ES modules</h2>
         <p>
-          vynta loads files with Node.js, so what Node.js runs, vynta runs: CommonJS, ES modules (<code>.mjs</code>, or
+          vyntra loads files with Node.js, so what Node.js runs, vyntra runs: CommonJS, ES modules (<code>.mjs</code>, or
           <code>"type": "module"</code>), and TypeScript (<code>.ts</code>, <code>.mts</code>, <code>.cts</code>) through
           the type stripping of Node.js 22.18 and later. There is no build step and no source map to go wrong: errors
           point at your lines.
@@ -563,11 +563,11 @@ module.exports = {
         </div>
 
         <h2 id="speed">Why it is fast</h2>
-        <p>Measured on real suites, most of a test run is not the tests. vynta removes what it can of the rest:</p>
+        <p>Measured on real suites, most of a test run is not the tests. vyntra removes what it can of the rest:</p>
         <ul>
           <li><strong>No transform pipeline.</strong> Files are loaded by Node.js as they are, instead of going through Babel or Vite first.</li>
           <li><strong>Warm workers.</strong> Dependencies are loaded once per worker, not once per file.</li>
-          <li><strong>Caches between runs</strong>, in <code>node_modules/.cache/vynta</code>: the duration of every file, where <code>require()</code> found each dependency (resolving a large dependency tree probes the file system thousands of times), and V8's compiled code.</li>
+          <li><strong>Caches between runs</strong>, in <code>node_modules/.cache/vyntra</code>: the duration of every file, where <code>require()</code> found each dependency (resolving a large dependency tree probes the file system thousands of times), and V8's compiled code.</li>
           <li><strong>The slowest file first</strong>, on just enough workers.</li>
           <li><strong>Assertions that cost nothing when they pass.</strong> Messages, diffs and code frames are only built for failures.</li>
         </ul>
@@ -576,12 +576,12 @@ module.exports = {
         <h2 id="faq">FAQ</h2>
         <h3>Do I have to change my tests?</h3>
         <p>
-          Usually not. vynta runs Jest and Vitest tests as they are, including their imports and your Jest
+          Usually not. vyntra runs Jest and Vitest tests as they are, including their imports and your Jest
           configuration. <a href="migrating.html">Migrating</a> lists the few differences.
         </p>
         <h3>My tests call <code>process.send</code>.</h3>
         <p>
-          Jest runs tests in child processes, where <code>process.send</code> exists. In vynta's worker threads it is
+          Jest runs tests in child processes, where <code>process.send</code> exists. In vyntra's worker threads it is
           there too, and does nothing; with <code>--pool forks</code> it is the real one.
         </p>
         <h3>What is not supported yet?</h3>
@@ -591,7 +591,7 @@ module.exports = {
         </p>
         <h3>Where is the cache, and can I delete it?</h3>
         <p>
-          In <code>node_modules/.cache/vynta</code>. Deleting it is always safe: the next run is slower while it fills
+          In <code>node_modules/.cache/vyntra</code>. Deleting it is always safe: the next run is slower while it fills
           it again. It is rebuilt by itself when your dependencies change.
         </p>
       </article>
@@ -599,11 +599,11 @@ module.exports = {
 
     <footer class="footer">
       <div class="container">
-        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>vyntra is MIT licensed. &copy; Jes&uacute;s Seijas</span>
         <span>
           <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
-          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
-          <a href="https://www.npmjs.com/package/vynta">npm</a>
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vyntra">npm</a>
         </span>
       </div>
     </footer>

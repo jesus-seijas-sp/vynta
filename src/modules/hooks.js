@@ -5,7 +5,7 @@ const state = require('../state');
 const { hoistMocks } = require('./hoist');
 const { mocks, resolveKey, ACTUAL } = require('./registry');
 
-const MOCK_SCHEME = 'vynta-mock:';
+const MOCK_SCHEME = 'vyntra-mock:';
 
 // Files whose vi.mock() calls are hoisted: the test and setup files that call them.
 const hoistTargets = new Set();
@@ -21,7 +21,7 @@ function installCjs() {
   }
   installed.cjs = true;
   const load = Module._load;
-  Module._load = function vyntaLoad(request, parent, ...rest) {
+  Module._load = function vyntraLoad(request, parent, ...rest) {
     if (mocks.size > 0 && mocks.bypass === 0) {
       const from = parent?.filename ?? path.join(process.cwd(), 'index.js');
       const entry = mocks.lookup(resolveKey(request, from), request);

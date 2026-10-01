@@ -30,7 +30,7 @@ function dependencyStamp(rootDir) {
 }
 
 function cacheFile(rootDir) {
-  return path.join(rootDir, 'node_modules', '.cache', 'vynta', 'resolutions.json');
+  return path.join(rootDir, 'node_modules', '.cache', 'vyntra', 'resolutions.json');
 }
 
 // Where require() found each module in node_modules, kept between runs. Resolving is most of the time spent loading

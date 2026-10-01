@@ -70,3 +70,22 @@ describe('format', () => {
     expect(format(expect.any(Number))).toBe('Any<Number>');
   });
 });
+
+describe('looksLikeJsx', () => {
+  // eslint-disable-next-line global-require
+  const { looksLikeJsx } = require('../src/transform');
+
+  it('finds JSX in code', () => {
+    expect(looksLikeJsx('const a = <div>hi</div>;')).toBe(true);
+    expect(looksLikeJsx(['function App() {', '  return <Button label="x" />;', '}'].join('\n'))).toBe(true);
+    expect(looksLikeJsx(['render(<>', '  <A />', '</>);'].join('\n'))).toBe(true);
+  });
+
+  it('ignores HTML in strings, templates and comments', () => {
+    expect(looksLikeJsx("const a = '<script>alert(1)</script>';")).toBe(false);
+    // eslint-disable-next-line no-template-curly-in-string -- source code given as a string
+    expect(looksLikeJsx('const b = `<strong>${name}</strong>`;')).toBe(false);
+    expect(looksLikeJsx(['// returns <div> markup', 'const c = 1;'].join('\n'))).toBe(false);
+    expect(looksLikeJsx("res.send('Not found <script>x</script>');")).toBe(false);
+  });
+});

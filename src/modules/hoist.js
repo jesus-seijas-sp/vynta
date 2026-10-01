@@ -11,8 +11,8 @@ const CONTINUES = new Set([',', '=', '.', '(', '[', '?', ':', '+', '-', '*', '/'
 
 // Where the vi object is taken from in hoisted code: `vi` may be a binding declared further down (an import, or
 // const { vi } = require('vitest')), which hoisted code can not see yet.
-const VI = '__vynta_vi__';
-const HEADER = `const ${VI} = globalThis[Symbol.for('vynta.vi')];`;
+const VI = '__vyntra_vi__';
+const HEADER = `const ${VI} = globalThis[Symbol.for('vyntra.vi')];`;
 
 function statementStarts(scanner) {
   const { src } = scanner;
@@ -140,7 +140,7 @@ function hoistMocks(src, { esm = false } = {}) {
   });
   body += src.slice(cursor);
   // ES modules settle their (maybe async) mock factories before importing anything.
-  const prepare = esm ? ` await globalThis[Symbol.for('vynta.mocks')].prepare();` : '';
+  const prepare = esm ? ` await globalThis[Symbol.for('vyntra.mocks')].prepare();` : '';
   const header = `${HEADER} ${hoisted.join(' ')}${prepare}`;
   // A "use strict" directive or a shebang must stay first.
   const first = /^(?:#![^\n]*|\s*(['"])use strict\1;?)/.exec(body);

@@ -46,7 +46,7 @@ const DEFAULTS = {
   coverageThreshold: undefined,
   // Files whose tests do not depend on each other, which can run in parts on several workers: true or globs.
   splitFiles: false,
-  // 'node', 'happy-dom' or 'jsdom'; the last two come from the project, not from vynta.
+  // 'node', 'happy-dom' or 'jsdom'; the last two come from the project, not from vyntra.
   environment: 'node',
   // The URL the document reports, which a component may read for its origin.
   environmentUrl: undefined,
@@ -64,7 +64,7 @@ const DEFAULTS = {
   moduleFileExtensions: ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'json', 'node'],
 };
 
-const CONFIG_FILES = ['vynta.config.js', 'vynta.config.cjs', 'vynta.config.mjs'];
+const CONFIG_FILES = ['vyntra.config.js', 'vyntra.config.cjs', 'vyntra.config.mjs'];
 const JEST_FILES = ['jest.config.js', 'jest.config.cjs', 'jest.config.mjs', 'jest.config.json'];
 
 async function importConfig(file) {
@@ -87,7 +87,7 @@ function readPackageJson(rootDir) {
 
 const resolveRootDir = (value, rootDir) => (typeof value === 'string' ? value.replaceAll('<rootDir>', rootDir) : value);
 
-// The options of a Jest config vynta understands, so a Jest project runs without a vynta config.
+// The options of a Jest config vyntra understands, so a Jest project runs without a vyntra config.
 function fromJestConfig(jest, rootDir) {
   const config = {};
   const copy = [
@@ -142,7 +142,7 @@ function fromJestConfig(jest, rootDir) {
   return config;
 }
 
-// The vynta config file in use, if there is one (not a package.json or Jest config).
+// The vyntra config file in use, if there is one (not a package.json or Jest config).
 function configFileOf(rootDir, explicit) {
   if (explicit) {
     return path.resolve(rootDir, explicit);
@@ -156,8 +156,8 @@ async function findConfig(rootDir, explicit) {
     return importConfig(own);
   }
   const pkg = readPackageJson(rootDir);
-  if (pkg.vynta) {
-    return pkg.vynta;
+  if (pkg.vyntra) {
+    return pkg.vyntra;
   }
   const jestFile = JEST_FILES.map((name) => path.join(rootDir, name)).find((file) => fs.existsSync(file));
   if (jestFile) {

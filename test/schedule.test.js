@@ -90,9 +90,9 @@ describe('split files', () => {
     const dir = copyFixture('split');
     const testFile = path.join(dir, 'parts.test.js');
     // What a previous run learned: a long file of 6 tests.
-    fs.mkdirSync(path.join(dir, 'node_modules', '.cache', 'vynta'), { recursive: true });
+    fs.mkdirSync(path.join(dir, 'node_modules', '.cache', 'vyntra'), { recursive: true });
     fs.writeFileSync(
-      path.join(dir, 'node_modules', '.cache', 'vynta', 'timings.json'),
+      path.join(dir, 'node_modules', '.cache', 'vyntra', 'timings.json'),
       JSON.stringify({ files: { [testFile]: { duration: 30000, tests: 6, setup: 0 } } })
     );
     try {

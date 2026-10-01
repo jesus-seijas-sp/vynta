@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Benchmarks · vynta</title>
-    <meta name="description" content="vynta, Vitest and Jest running the same test suites: wall time with and without coverage, and where the time goes." />
+    <title>Benchmarks · vyntra</title>
+    <meta name="description" content="vyntra, Vitest and Jest running the same test suites: wall time with and without coverage, and where the time goes." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
@@ -16,13 +16,13 @@
   <body>
     <header class="header">
       <div class="header-inner">
-        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <a class="logo" href="./"><span class="logo-mark">v</span>vyntra</a>
         <nav class="nav">
           <a href="guide.html">Guide</a>
           <a href="api.html">API</a>
           <a class="hide-small" href="benchmarks.html" aria-current="page">Benchmarks</a>
           <a class="hide-small" href="migrating.html">Migrating</a>
-          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a>
           <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -48,7 +48,7 @@
       <article class="content">
         <h1>Benchmarks</h1>
         <p class="intro">
-          The same test files, unchanged, run by vynta, Vitest and Jest. Every time is the whole command, from starting it
+          The same test files, unchanged, run by vyntra, Vitest and Jest. Every time is the whole command, from starting it
           to its exit: what you wait for in your terminal and on CI.
         </p>
 
@@ -70,7 +70,7 @@
           <div class="chart">
             <h3>Whole suite</h3>
             <p class="subtitle">Seconds, median of 7 runs. Less is better.</p>
-            <div class="chart-row us"><span class="name">vynta</span><span class="track"><span class="fill" style="width: 18.1%"></span></span><span class="value">0.68 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.1%"></span></span><span class="value">0.68 s</span></div>
             <div class="chart-row"><span class="name">Vitest (no isolate)</span><span class="track"><span class="fill" style="width: 42%"></span></span><span class="value">1.58 s</span></div>
             <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 48.7%"></span></span><span class="value">1.83 s</span></div>
             <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">3.76 s</span></div>
@@ -78,7 +78,7 @@
           <div class="chart">
             <h3>With coverage</h3>
             <p class="subtitle">Seconds, median of 7 runs. Less is better.</p>
-            <div class="chart-row us"><span class="name">vynta</span><span class="track"><span class="fill" style="width: 21.6%"></span></span><span class="value">1.12 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 21.6%"></span></span><span class="value">1.12 s</span></div>
             <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 55.8%"></span></span><span class="value">2.89 s</span></div>
             <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">5.18 s</span></div>
           </div>
@@ -87,7 +87,7 @@
           <table class="numbers">
             <thead><tr><th>Runner</th><th>Wall time</th><th>With coverage</th><th>Lines covered</th></tr></thead>
             <tbody>
-              <tr><td><strong>vynta 0.1</strong></td><td><strong>0.68 s</strong></td><td><strong>1.12 s</strong></td><td>94.5 %</td></tr>
+              <tr><td><strong>vyntra 0.1</strong></td><td><strong>0.68 s</strong></td><td><strong>1.12 s</strong></td><td>94.5 %</td></tr>
               <tr><td>Vitest 5.0.3</td><td>1.83 s</td><td>2.89 s</td><td>92.7 %</td></tr>
               <tr><td>Vitest 5.0.3, <code>--no-isolate</code></td><td>1.58 s</td><td>&ndash;</td><td>&ndash;</td></tr>
               <tr><td>Jest 30.2</td><td>3.76 s</td><td>5.18 s</td><td>92.6 %</td></tr>
@@ -95,7 +95,7 @@
           </table>
         </div>
         <p>
-          The coverage figures differ a little because each runner counts lines its own way; the uncovered lines vynta
+          The coverage figures differ a little because each runner counts lines its own way; the uncovered lines vyntra
           reports match Jest's.
         </p>
 
@@ -109,13 +109,13 @@
           <div class="chart">
             <h3>Whole suite</h3>
             <p class="subtitle">Seconds, median of 2 runs after a warm-up. Less is better.</p>
-            <div class="chart-row us"><span class="name">vynta</span><span class="track"><span class="fill" style="width: 33.9%"></span></span><span class="value">81.8 s</span></div>
-            <div class="chart-row us"><span class="name">vynta, 4 workers</span><span class="track"><span class="fill" style="width: 34%"></span></span><span class="value">82.1 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 33.9%"></span></span><span class="value">81.8 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra, 4 workers</span><span class="track"><span class="fill" style="width: 34%"></span></span><span class="value">82.1 s</span></div>
             <div class="chart-row"><span class="name">Jest, 4 workers</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">241.2 s</span></div>
           </div>
         </div>
         <p>
-          With the same number of workers, vynta takes a third of the time. Its run is as long as its slowest file, a
+          With the same number of workers, vyntra takes a third of the time. Its run is as long as its slowest file, a
           file of 114 end-to-end tests that takes about 75 seconds by itself: the other 78 files run next to it.
         </p>
         <div class="callout">
@@ -129,7 +129,7 @@
         <p>A test run is much more than the tests. What each runner spends besides them:</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Cost</th><th>Jest</th><th>Vitest</th><th>vynta</th></tr></thead>
+            <thead><tr><th>Cost</th><th>Jest</th><th>Vitest</th><th>vyntra</th></tr></thead>
             <tbody>
               <tr><td>Transforming files</td><td>Babel, for every file</td><td>Vite, for every file</td><td>None: Node.js loads them (types stripped by Node.js)</td></tr>
               <tr><td>Loading dependencies</td><td>Again for every test file</td><td>Again for every file, by default</td><td>Once per worker, kept between files</td></tr>
@@ -142,23 +142,23 @@
           </table>
         </div>
         <p>
-          The start-up of vynta itself is about 5 ms over starting Node.js. On large projects the biggest cost left is
+          The start-up of vyntra itself is about 5 ms over starting Node.js. On large projects the biggest cost left is
           loading dependencies: a backend can load thousands of modules, and resolving each <code>require()</code> probes
-          the file system many times. vynta keeps where it found each of them, and V8's compiled code, in
-          <code>node_modules/.cache/vynta</code>, which halves that time on the runs after the first.
+          the file system many times. vyntra keeps where it found each of them, and V8's compiled code, in
+          <code>node_modules/.cache/vyntra</code>, which halves that time on the runs after the first.
         </p>
 
         <h2 id="method">How it was measured</h2>
         <ul>
           <li>Windows 11, Intel Core i7-13700H (6 performance and 8 efficiency cores), Node.js 22.21.</li>
-          <li>vynta 0.1, Vitest 5.0.3 (with <code>@vitest/coverage-v8</code>), Jest 30.2.</li>
+          <li>vyntra 0.1, Vitest 5.0.3 (with <code>@vitest/coverage-v8</code>), Jest 30.2.</li>
           <li>Each command ran once to warm the disk cache, then 7 times (the library) or 2 times (the backend); the median is shown.</li>
           <li>Vitest ran with <code>globals: true</code> and a setup file with <code>globalThis.jest = vi</code>, so the Jest tests ran unchanged.</li>
-          <li>vynta ran with its defaults: it chose the number of workers from the previous run.</li>
+          <li>vyntra ran with its defaults: it chose the number of workers from the previous run.</li>
         </ul>
-        <p>To measure your own suite, vynta comes with the script used here:</p>
-        <pre><code class="language-bash">node node_modules/vynta/bench/compare.js 5 \
-  "vynta::npx vynta" \
+        <p>To measure your own suite, vyntra comes with the script used here:</p>
+        <pre><code class="language-bash">node node_modules/vyntra/bench/compare.js 5 \
+  "vyntra::npx vyntra" \
   "vitest::npx vitest run" \
   "jest::npx jest"</code></pre>
       </article>
@@ -166,11 +166,11 @@
 
     <footer class="footer">
       <div class="container">
-        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>vyntra is MIT licensed. &copy; Jes&uacute;s Seijas</span>
         <span>
           <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
-          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
-          <a href="https://www.npmjs.com/package/vynta">npm</a>
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vyntra">npm</a>
         </span>
       </div>
     </footer>

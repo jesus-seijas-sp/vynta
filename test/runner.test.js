@@ -98,7 +98,7 @@ describe('test name pattern', () => {
 describe('module mocking', () => {
   it.each([[[]], [['-i']]])('mocks CommonJS and ES modules without leaking between files (%j)', (args) => {
     const { statuses } = runFixture('mocking', args);
-    expect(Object.values(statuses)).toHaveLength(14);
+    expect(Object.values(statuses)).toHaveLength(15);
     expect(Object.entries(statuses).filter(([, status]) => status !== 'passed')).toEqual([]);
   });
 });

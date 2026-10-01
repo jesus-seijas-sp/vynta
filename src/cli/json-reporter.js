@@ -1,4 +1,4 @@
-// Prints the whole run as one JSON document when it ends, for tools (and vynta's own tests).
+// Prints the whole run as one JSON document when it ends, for tools (and vyntra's own tests).
 class JsonReporter {
   constructor(config, out = process.stdout) {
     this.config = config;

@@ -1,4 +1,4 @@
-import vynta from './index.js';
+import vyntra from './index.js';
 
 export const {
   describe,
@@ -15,6 +15,6 @@ export const {
   vi,
   jest,
   installGlobals,
-} = vynta;
+} = vyntra;
 
-export default vynta;
+export default vyntra;

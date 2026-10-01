@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>API reference · vynta</title>
-    <meta name="description" content="Every global, matcher, vi function, mock method, CLI flag and configuration option of vynta." />
+    <title>API reference · vyntra</title>
+    <meta name="description" content="Every global, matcher, vi function, mock method, CLI flag and configuration option of vyntra." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
@@ -16,13 +16,13 @@
   <body>
     <header class="header">
       <div class="header-inner">
-        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <a class="logo" href="./"><span class="logo-mark">v</span>vyntra</a>
         <nav class="nav">
           <a href="guide.html">Guide</a>
           <a href="api.html" aria-current="page">API</a>
           <a class="hide-small" href="benchmarks.html">Benchmarks</a>
           <a class="hide-small" href="migrating.html">Migrating</a>
-          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a>
           <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -68,7 +68,7 @@
       <article class="content">
         <h1>API reference</h1>
         <p class="intro">
-          Everything vynta provides. The functions of tests are globals, and can be imported from <code>vynta</code> (or
+          Everything vyntra provides. The functions of tests are globals, and can be imported from <code>vyntra</code> (or
           from <code>vitest</code> and <code>@jest/globals</code>, which resolve to it). <code>jest</code> and
           <code>vi</code> are the same object.
         </p>
@@ -312,7 +312,7 @@
         </div>
 
         <h2 id="cli">Command line</h2>
-        <pre><code class="language-bash">vynta [options] [path patterns...]</code></pre>
+        <pre><code class="language-bash">vyntra [options] [path patterns...]</code></pre>
         <p>Path patterns are regular expressions matched against the path of every test file. The names of Jest and Vitest flags are accepted.</p>
         <div class="table-wrap">
           <table>
@@ -343,7 +343,7 @@
         </div>
 
         <h2 id="config">Configuration</h2>
-        <p>In <code>vynta.config.js</code>, <code>"vynta"</code> in <code>package.json</code>, or your Jest configuration (see <a href="guide.html#configuration">the guide</a>).</p>
+        <p>In <code>vyntra.config.js</code>, <code>"vyntra"</code> in <code>package.json</code>, or your Jest configuration (see <a href="guide.html#configuration">the guide</a>).</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
@@ -360,7 +360,7 @@
               <tr><td><code>pool</code></td><td><code>'threads'</code></td><td><code>'threads'</code>, <code>'forks'</code> or <code>'inline'</code></td></tr>
               <tr><td><code>maxWorkers</code></td><td>from the last run</td><td>Number of workers, or <code>'50%'</code></td></tr>
               <tr><td><code>isolate</code></td><td><code>true</code></td><td>Fresh project modules for every file</td></tr>
-              <tr><td><code>splitFiles</code></td><td><code>false</code></td><td><code>true</code> or globs: files whose tests do not depend on each other, which vynta may run in parts on several workers when they are the long ones</td></tr>
+              <tr><td><code>splitFiles</code></td><td><code>false</code></td><td><code>true</code> or globs: files whose tests do not depend on each other, which vyntra may run in parts on several workers when they are the long ones</td></tr>
               <tr><td><code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td><td><code>false</code></td><td>Clears, resets or restores every mock before each test</td></tr>
               <tr><td><code>allowOnly</code></td><td><code>true</code></td><td>Fails files with <code>.only</code> when false</td></tr>
               <tr><td><code>passWithNoTests</code></td><td><code>false</code></td><td>Succeeds with no test files</td></tr>
@@ -380,11 +380,11 @@
 
     <footer class="footer">
       <div class="container">
-        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>vyntra is MIT licensed. &copy; Jes&uacute;s Seijas</span>
         <span>
           <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
-          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
-          <a href="https://www.npmjs.com/package/vynta">npm</a>
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vyntra">npm</a>
         </span>
       </div>
     </footer>

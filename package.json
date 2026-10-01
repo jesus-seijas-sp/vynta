@@ -1,19 +1,19 @@
 {
-  "name": "vynta",
+  "name": "vyntra",
   "version": "0.1.0",
   "description": "A very fast, zero-dependency test runner with a Jest/Vitest compatible API",
-  "homepage": "https://github.com/jesus-seijas-sp/vynta#readme",
+  "homepage": "https://github.com/jesus-seijas-sp/vyntra#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jesus-seijas-sp/vynta.git"
+    "url": "git+https://github.com/jesus-seijas-sp/vyntra.git"
   },
   "bugs": {
-    "url": "https://github.com/jesus-seijas-sp/vynta/issues"
+    "url": "https://github.com/jesus-seijas-sp/vyntra/issues"
   },
   "main": "./src/index.js",
   "type": "commonjs",
   "bin": {
-    "vynta": "./bin/vynta.js"
+    "vyntra": "./bin/vyntra.js"
   },
   "exports": {
     ".": {
@@ -28,7 +28,7 @@
     "bench/compare.js"
   ],
   "scripts": {
-    "test": "node bin/vynta.js",
+    "test": "node bin/vyntra.js",
     "lint": "eslint .",
     "lintfix": "eslint --fix ."
   },
@@ -55,7 +55,7 @@
     "globals": "^17.0.0",
     "prettier": "^3.8.0"
   },
-  "vynta": {
+  "vyntra": {
     "exclude": [
       "**/node_modules/**",
       "**/.git/**",

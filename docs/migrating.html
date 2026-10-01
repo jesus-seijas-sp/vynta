@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Migrating from Jest or Vitest · vynta</title>
-    <meta name="description" content="Moving a Jest or Vitest suite to vynta: what runs as it is, the options it reads, and the few differences." />
+    <title>Migrating from Jest or Vitest · vyntra</title>
+    <meta name="description" content="Moving a Jest or Vitest suite to vyntra: what runs as it is, the options it reads, and the few differences." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
@@ -16,13 +16,13 @@
   <body>
     <header class="header">
       <div class="header-inner">
-        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <a class="logo" href="./"><span class="logo-mark">v</span>vyntra</a>
         <nav class="nav">
           <a href="guide.html">Guide</a>
           <a href="api.html">API</a>
           <a class="hide-small" href="benchmarks.html">Benchmarks</a>
           <a class="hide-small" href="migrating.html" aria-current="page">Migrating</a>
-          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a>
           <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -51,25 +51,29 @@
       <article class="content">
         <h1>Migrating from Jest or Vitest</h1>
         <p class="intro">
-          vynta runs Jest and Vitest suites as they are. For most projects, migrating means installing it and changing
-          the <code>test</code> script. This page lists what vynta reads from your configuration and the few places
+          vyntra runs Jest and Vitest suites as they are. For most projects, migrating means installing it and changing
+          the <code>test</code> script. This page lists what vyntra reads from your configuration and the few places
           where it behaves differently.
         </p>
 
         <h2 id="try">Try it first</h2>
-        <p>Nothing has to change to try it. Install vynta and run it next to your current runner:</p>
-        <pre><code class="language-bash">npm install --save-dev vynta
-npx vynta</code></pre>
         <p>
-          If every test passes, switch the script. If some fail, the sections below explain the usual reasons, from the
-          most common to the rarest.
+          Nothing has to change to try it, not even your dependencies: <code>npx</code> downloads vyntra to its cache
+          and runs it in your project, next to your current runner.
         </p>
+        <pre><code class="language-bash">npx vyntra</code></pre>
+        <p>
+          If every test passes, install it, so your <code>test</code> script and your imports find it and everyone runs
+          the same version, and switch the script:
+        </p>
+        <pre><code class="language-bash">npm install --save-dev vyntra</code></pre>
+        <p>If some fail, the sections below explain the usual reasons, from the most common to the rarest.</p>
 
         <h2 id="jest">From Jest</h2>
         <p>Your tests, your <code>jest.config.js</code> (or the <code>"jest"</code> key of <code>package.json</code>) and your flags keep working:</p>
         <pre><code class="language-json">{
   "scripts": {
-    "test": "vynta --silent --coverage"
+    "test": "vyntra --silent --coverage"
   }
 }</code></pre>
         <ul>
@@ -81,10 +85,10 @@ npx vynta</code></pre>
           <li>The flags <code>-t</code>, <code>-u</code>, <code>-i</code>, <code>--ci</code>, <code>--silent</code>, <code>--verbose</code>, <code>--coverage</code>, <code>--maxWorkers</code>, <code>--bail</code>, <code>--passWithNoTests</code>, and path patterns.</li>
         </ul>
 
-        <h3 id="jest-config">Jest options vynta reads</h3>
+        <h3 id="jest-config">Jest options vyntra reads</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Jest option</th><th>In vynta</th></tr></thead>
+            <thead><tr><th>Jest option</th><th>In vyntra</th></tr></thead>
             <tbody>
               <tr><td><code>testTimeout</code>, <code>maxWorkers</code>, <code>bail</code>, <code>maxConcurrency</code></td><td><span class="check">✓</span> The same</td></tr>
               <tr><td><code>testMatch</code>, <code>roots</code>, <code>testPathIgnorePatterns</code></td><td><span class="check">✓</span> Which files are tests</td></tr>
@@ -104,7 +108,7 @@ npx vynta</code></pre>
         <h3 id="jest-differences">Differences with Jest</h3>
         <ul>
           <li>
-            <strong>Worker threads, not processes.</strong> Jest runs tests in child processes. vynta uses threads, which
+            <strong>Worker threads, not processes.</strong> Jest runs tests in child processes. vyntra uses threads, which
             start faster; <code>process.send</code> exists in them (and sends nothing), as code under test sometimes calls
             it. For code that needs a whole process (<code>process.chdir</code>, native addons that are not thread safe),
             use <code>--pool forks</code>.
@@ -120,13 +124,13 @@ npx vynta</code></pre>
           </li>
           <li>
             <strong>Mock factories are not checked.</strong> Jest refuses factories that use variables whose names do not
-            start with <code>mock</code>; vynta does not check them, and hoists the calls the same way.
+            start with <code>mock</code>; vyntra does not check them, and hoists the calls the same way.
           </li>
         </ul>
 
         <h2 id="vitest">From Vitest</h2>
         <p>Your test files run as they are, imports from <code>vitest</code> included:</p>
-        <pre><code class="language-js">import { describe, expect, it, vi } from 'vitest'; // resolved to vynta</code></pre>
+        <pre><code class="language-js">import { describe, expect, it, vi } from 'vitest'; // resolved to vyntra</code></pre>
         <ul>
           <li><code>vi.fn</code>, <code>vi.spyOn</code>, <code>vi.mock</code> with <code>importOriginal</code>, <code>vi.hoisted</code>, <code>vi.doMock</code>, <code>vi.importActual</code>, fake timers, <code>vi.stubGlobal</code>, <code>vi.stubEnv</code>, <code>vi.waitFor</code>.</li>
           <li><code>test.extend</code> fixtures, <code>test.for</code>, <code>test.concurrent</code>, <code>test.fails</code>, <code>skipIf</code> and <code>runIf</code>, the test context.</li>
@@ -136,12 +140,12 @@ npx vynta</code></pre>
 
         <h3 id="vitest-config">Vitest options</h3>
         <p>
-          vynta does not read <code>vitest.config.ts</code>, as that needs Vite. Move the test options to
-          <code>vynta.config.js</code>; most have the same name:
+          vyntra does not read <code>vitest.config.ts</code>, as that needs Vite. Move the test options to
+          <code>vyntra.config.js</code>; most have the same name:
         </p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Vitest (<code>test.*</code>)</th><th>vynta</th></tr></thead>
+            <thead><tr><th>Vitest (<code>test.*</code>)</th><th>vyntra</th></tr></thead>
             <tbody>
               <tr><td><code>include</code>, <code>exclude</code>, <code>setupFiles</code></td><td><span class="check">✓</span> The same</td></tr>
               <tr><td><code>testTimeout</code>, <code>hookTimeout</code>, <code>retry</code>, <code>maxConcurrency</code></td><td><span class="check">✓</span> The same</td></tr>
@@ -160,7 +164,7 @@ npx vynta</code></pre>
         <h3 id="vitest-differences">Differences with Vitest</h3>
         <ul>
           <li>
-            <strong>The order of <code>afterEach</code> hooks.</strong> vynta follows Jest: the hooks of a suite run in the
+            <strong>The order of <code>afterEach</code> hooks.</strong> vyntra follows Jest: the hooks of a suite run in the
             order they were declared. Vitest runs them in reverse by default.
           </li>
           <li>
@@ -169,7 +173,7 @@ npx vynta</code></pre>
           </li>
           <li>
             <strong>No transform.</strong> What Vite compiles for you (JSX, TypeScript-only syntax, <code>import.meta.env</code>)
-            is not compiled: vynta runs what Node.js runs.
+            is not compiled: vyntra runs what Node.js runs.
           </li>
         </ul>
 
@@ -184,11 +188,11 @@ npx vynta</code></pre>
 
     <footer class="footer">
       <div class="container">
-        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>vyntra is MIT licensed. &copy; Jes&uacute;s Seijas</span>
         <span>
           <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
-          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
-          <a href="https://www.npmjs.com/package/vynta">npm</a>
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vyntra">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vyntra">npm</a>
         </span>
       </div>
     </footer>

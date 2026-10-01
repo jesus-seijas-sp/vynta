@@ -6,7 +6,7 @@ const path = require('node:path');
 // long files can be split in as many parts as they have tests.
 class Timings {
   constructor(rootDir) {
-    this.file = path.join(rootDir, 'node_modules', '.cache', 'vynta', 'timings.json');
+    this.file = path.join(rootDir, 'node_modules', '.cache', 'vyntra', 'timings.json');
     this.files = {};
     try {
       const saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));

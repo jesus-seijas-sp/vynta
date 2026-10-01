@@ -71,7 +71,7 @@ class WorkerPool {
     };
     worker.on('message', (message) => {
       // Messages the code under test sends (process.send in a child process) are not for the pool.
-      if (!message?.vynta) {
+      if (!message?.vyntra) {
         return;
       }
       if (message.type === 'finished') {

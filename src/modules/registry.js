@@ -9,7 +9,7 @@ const { orderMocks } = require('./mock-order');
 const { automock } = require('./automock');
 
 // Query that marks an import as the real module, which the resolve hook must not replace by its mock.
-const ACTUAL = 'vynta-actual';
+const ACTUAL = 'vyntra-actual';
 
 // While positive, require() loads real modules (requireActual) and the hooks serve files, not mocks.
 const bypass = { depth: 0 };
@@ -200,7 +200,16 @@ class ModuleMocks {
         );
       }
     } else {
-      const { manual, exports: mocked } = mockWithoutFactory(entry, () => this.requireActual(entry.key, entry.from));
+      // The real module as require() loads it: a package's key is the file an import loads (its ES module build,
+      // whose namespace is not what require() returns), so it is required by its specifier.
+      const actual = () => {
+        try {
+          return this.requireActual(entry.specifier, entry.from);
+        } catch {
+          return this.requireActual(entry.key, entry.from);
+        }
+      };
+      const { manual, exports: mocked } = mockWithoutFactory(entry, actual);
       exports = manual ? this.requireActual(manual, entry.from) : mocked;
     }
     Object.assign(entry, { ready: true, exports });
@@ -259,7 +268,9 @@ class ModuleMocks {
       throw new Error(`The mock of "${entry?.specifier ?? key}" was not ready: call vi.mock() at the top of the file`);
     }
     const exports = entry.exports ?? {};
-    const lines = [`const mocked = globalThis[Symbol.for('vynta.mocks')].entries.get(${JSON.stringify(key)}).exports;`];
+    const lines = [
+      `const mocked = globalThis[Symbol.for('vyntra.mocks')].entries.get(${JSON.stringify(key)}).exports;`,
+    ];
     const names = [...new Set([...Object.keys(exports), ...exportedNames(key)])].filter((name) => name !== 'default');
     names.forEach((name, i) => {
       lines.push(`const e${i} = mocked[${JSON.stringify(name)}];`, `export { e${i} as ${JSON.stringify(name)} };`);
@@ -275,6 +286,6 @@ class ModuleMocks {
 }
 
 const mocks = new ModuleMocks();
-globalThis[Symbol.for('vynta.mocks')] = mocks;
+globalThis[Symbol.for('vyntra.mocks')] = mocks;
 
 module.exports = { mocks, resolveKey, importActual, ACTUAL };

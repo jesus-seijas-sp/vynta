@@ -4,7 +4,7 @@
 // and each registers a setter per export under its own namespace: the spy goes in through it, and
 // every importer sees it, as under vitest. Only the modules a test file names are touched.
 
-const SETTERS = Symbol.for('vynta.exportSetters');
+const SETTERS = Symbol.for('vyntra.exportSetters');
 globalThis[SETTERS] ??= new WeakMap();
 
 const NAMESPACE_IMPORT = /import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s+from\s*['"]([^'"\n]+)['"]/g;
@@ -15,7 +15,7 @@ const CLASS = new RegExp(`^export\\s+class\\s+(${IDENTIFIER})`, 'gm');
 const DEFAULT_NAMED = new RegExp(`^export\\s+default\\s+(?:async\\s+)?(?:function\\*?|class)\\s+(${IDENTIFIER})`, 'm');
 const DEFAULT_ANONYMOUS = /^export\s+default\s+/m;
 const LIST = /^export\s*\{([^}]*)\}\s*;?\s*$/gm;
-const ANONYMOUS_DEFAULT = '__vynta_default__';
+const ANONYMOUS_DEFAULT = '__vyntra_default__';
 
 const spyable = new Set();
 
@@ -65,8 +65,8 @@ function makeSpyable(source, url) {
   );
   return [
     code,
-    `import * as __vynta_self__ from ${JSON.stringify(url)};`,
-    `globalThis[Symbol.for('vynta.exportSetters')].set(__vynta_self__, { ${setters.join(', ')} });`,
+    `import * as __vyntra_self__ from ${JSON.stringify(url)};`,
+    `globalThis[Symbol.for('vyntra.exportSetters')].set(__vyntra_self__, { ${setters.join(', ')} });`,
   ].join('\n');
 }
 

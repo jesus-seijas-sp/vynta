@@ -107,6 +107,6 @@ function releaseStubs() {
   unstubAllEnvs();
 }
 
-globalThis[Symbol.for('vynta.vi')] = vi;
+globalThis[Symbol.for('vyntra.vi')] = vi;
 
 module.exports = { vi, releaseStubs };

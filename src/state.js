@@ -1,6 +1,6 @@
-// Runtime state shared by every copy of vynta loaded in the same thread (a test file may resolve its own copy of
+// Runtime state shared by every copy of vyntra loaded in the same thread (a test file may resolve its own copy of
 // the package), so it lives in a global slot rather than in this module.
-const KEY = Symbol.for('vynta.state');
+const KEY = Symbol.for('vyntra.state');
 
 globalThis[KEY] ??= {
   config: {},
