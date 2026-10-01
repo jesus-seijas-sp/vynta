@@ -139,8 +139,14 @@ class ModuleMocks {
     this.entries.delete(resolveKey(specifier, from));
   }
 
+  // A package with CommonJS and ES module builds resolves to a different file for import than for
+  // require(), so a mock of a bare name also stands for every import of that name.
   lookup(key, specifier) {
-    return this.entries.get(key) ?? (specifier && isBare(specifier) ? this.entries.get(specifier) : undefined);
+    const entry = this.entries.get(key);
+    if (entry || !specifier || !isBare(specifier)) {
+      return entry;
+    }
+    return this.entries.get(specifier) ?? [...this.entries.values()].find((one) => one.specifier === specifier);
   }
 
   requireActual(specifier, from) {

@@ -9,7 +9,7 @@ const { runFile, reportUncaught } = require('./run/run-file');
 const { mocks } = require('./modules/registry');
 const { ResolveCache } = require('./resolve-cache');
 const { releaseStubs } = require('./vi');
-const { install: installEnvironment, teardown: teardownEnvironment } = require('./environment');
+const { install: installEnvironment, teardown: teardownEnvironment, environmentOf } = require('./environment');
 const globalSnapshot = require('./global-snapshot');
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug', 'trace', 'dir'];
@@ -85,20 +85,29 @@ async function createRuntime(config) {
   shimProcessSend();
   const pristine = globalSnapshot.snapshot();
   installEnvironment(config);
+  let installed = config.environment ?? 'node';
+  // A document keeps cookies, storage and nodes, which the next file must not inherit.
+  const switchEnvironment = (environment) => {
+    teardownEnvironment();
+    globalSnapshot.restore(pristine);
+    installEnvironment({ ...config, environment });
+    installed = environment;
+  };
   const coverage = config.coverage ? new CoverageCollector(config) : null;
   await coverage?.start();
   const run = async (path, shard) => {
-    const result = await runFile(path, config, shard);
+    const wanted = environmentOf(path) ?? config.environment ?? 'node';
+    if (wanted !== installed) {
+      switchEnvironment(wanted);
+    }
+    const result = await runFile(path, { ...config, environment: wanted }, shard);
     releaseStubs();
     mocks.clear();
     // Before the modules of the file are released.
     await coverage?.take();
     if (config.isolate !== false) {
       isolateModules();
-      // A document keeps cookies, storage and nodes, which the next file must not inherit.
-      teardownEnvironment();
-      globalSnapshot.restore(pristine);
-      installEnvironment(config);
+      switchEnvironment(installed);
     }
     return result;
   };

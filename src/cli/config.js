@@ -12,6 +12,9 @@ const DEFAULTS = {
   testTimeout: 5000,
   hookTimeout: undefined,
   setupFiles: [],
+  // The order of a suite's afterEach and afterAll hooks: 'stack' (last registered first, as vitest) or 'list'
+  // (declaration order, as Jest).
+  hookOrder: 'stack',
   // Project modules are loaded fresh for every test file; node_modules stay loaded.
   isolate: true,
   // Packages loaded fresh for every test file too: those that keep state of their own at module level,
@@ -19,6 +22,10 @@ const DEFAULTS = {
   isolateDependencies: [],
   // threads: worker threads; inline: everything in the main thread.
   pool: 'threads',
+  // A worker whose file failed is replaced, so state the failure left broken does not fail the files after it.
+  replaceFailedWorkers: true,
+  // Megabytes of heap after which a worker is replaced by a fresh one (0: never).
+  workerMemoryLimit: 1024,
   maxWorkers: undefined,
   silent: false,
   retry: 0,
@@ -43,6 +50,8 @@ const DEFAULTS = {
   environment: 'node',
   // The URL the document reports, which a component may read for its origin.
   environmentUrl: undefined,
+  // Options for the document, in vitest's shape: { happyDOM: { settings }, jsdom: { ... } }.
+  environmentOptions: undefined,
   // Set false to load files as they are, even when they need JSX compiled away.
   transform: undefined,
   // Jest's moduleNameMapper: { '<regex>': '<rootDir>/path/$1' }, for the aliases a bundler would resolve.
@@ -97,6 +106,7 @@ function fromJestConfig(jest, rootDir) {
     .forEach((key) => {
       config[key] = jest[key];
     });
+  config.hookOrder = 'list';
   if (jest.collectCoverage) {
     config.coverage = true;
   }

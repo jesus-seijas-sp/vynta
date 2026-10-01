@@ -1,4 +1,5 @@
 const { parentPort, workerData } = require('node:worker_threads');
+const v8 = require('node:v8');
 const { createRuntime } = require('./runtime');
 
 // A worker thread talks through parentPort, a child process (--pool forks) through process.send.
@@ -17,7 +18,9 @@ function serve(config) {
         return;
       }
       if (type === 'run') {
-        send({ type: 'result', result: await run(path, shard) });
+        const result = await run(path, shard);
+        // This thread's own heap: a thread can not unload the ES modules it imported, so the pool replaces it past a limit.
+        send({ type: 'result', result, heapUsed: v8.getHeapStatistics().used_heap_size });
       } else if (type === 'finish') {
         send({ type: 'finished', collected: await finish() });
       }

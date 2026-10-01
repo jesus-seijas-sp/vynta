@@ -36,6 +36,11 @@ class FileRunner {
     return this.config.testTimeout;
   }
 
+  // vitest runs the after hooks of a suite last-registered first ('stack'); Jest in declaration order ('list').
+  afterHooks(hooks) {
+    return this.config.hookOrder === 'list' ? hooks : [...hooks].reverse();
+  }
+
   get hookTimeout() {
     return this.config.hookTimeout ?? this.config.testTimeout;
   }
@@ -154,7 +159,7 @@ class FileRunner {
     test.abort.abort();
     // afterEach from the innermost suite out, then the beforeEach cleanups and the fixtures in reverse.
     const suites = test.parent.path.reverse();
-    const afterEach = suites.map((suite) => () => this.runHooks(suite.hooks.afterEach, context));
+    const afterEach = suites.map((suite) => () => this.runHooks(this.afterHooks(suite.hooks.afterEach), context));
     errors.push(...(await FileRunner.runAll(afterEach)));
     errors.push(...(await FileRunner.runAll(cleanups.reverse())));
     if (fixtures) {
@@ -271,7 +276,7 @@ class FileRunner {
     }
     if (runnable) {
       try {
-        await this.runHooks(suite.hooks.afterAll);
+        await this.runHooks(this.afterHooks(suite.hooks.afterAll));
       } catch (error) {
         this.file.errors.push(serializeError(error));
       }

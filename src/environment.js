@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const Module = require('node:module');
 
@@ -140,18 +141,25 @@ const FROM_WINDOW = new Set([
 
 const SELF_REFERENCES = ['window', 'self', 'top', 'parent'];
 
-function createWindow(name, rootDir, url) {
+// environmentOptions takes vitest's shape: { happyDOM: {...}, jsdom: {...} }, passed to the constructors.
+function createWindow(name, rootDir, url, options = {}) {
   if (name === 'happy-dom') {
     // GlobalWindow shares this thread's intrinsics instead of creating its own.
     const { Window, GlobalWindow } = load('happy-dom', rootDir);
+    const happyDOM = options.happyDOM ?? {};
     return new (GlobalWindow || Window)({
-      url,
+      ...happyDOM,
+      url: happyDOM.url ?? url,
       console: globalThis.console,
-      settings: { disableErrorCapturing: true },
+      settings: { ...happyDOM.settings, disableErrorCapturing: true },
     });
   }
   const { JSDOM } = load('jsdom', rootDir);
-  return new JSDOM('<!doctype html><html><head></head><body></body></html>', { url, pretendToBeVisual: true }).window;
+  return new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+    pretendToBeVisual: true,
+    ...options.jsdom,
+    url: options.jsdom?.url ?? url,
+  }).window;
 }
 
 function shouldCopy(key) {
@@ -161,12 +169,26 @@ function shouldCopy(key) {
   return !(key in globalThis) || FROM_WINDOW.has(key);
 }
 
+// The window's own properties and its prototypes' (jsdom keeps addEventListener and the like on
+// Window.prototype and EventTarget.prototype), short of what every object has.
+function windowKeys(window) {
+  const keys = new Set();
+  for (let target = window; target && target !== Object.prototype; target = Object.getPrototypeOf(target)) {
+    Object.getOwnPropertyNames(target)
+      .filter((key) => key !== 'constructor')
+      .forEach((key) => keys.add(key));
+  }
+  return keys;
+}
+
 // Each global reads through to the window, so a property the window computes from its own state
 // (document, location, innerWidth) stays live. A test that assigns one replaces it for everyone.
 // Methods are bound because the window's own expect `this` to be the window, not this thread's global.
 function populate(window) {
   const originals = new Map();
-  const keys = new Set([...Object.getOwnPropertyNames(window), ...FROM_WINDOW].filter(shouldCopy));
+  // A window without one of them (jsdom has no fetch) leaves Node's in place.
+  const provided = [...FROM_WINDOW].filter((key) => window[key] !== undefined);
+  const keys = new Set([...windowKeys(window), ...provided].filter(shouldCopy));
   keys.forEach((key) => {
     const value = window[key];
     const bound = typeof value === 'function' && key[0] !== key[0].toUpperCase() ? value.bind(window) : null;
@@ -201,7 +223,8 @@ function populate(window) {
   return { keys, originals };
 }
 
-let created = null;
+// One window per environment and thread, made the first time a file asks for it.
+const created = new Map();
 
 function install(config = {}) {
   const name = config.environment ?? 'node';
@@ -209,9 +232,27 @@ function install(config = {}) {
     return current;
   }
   const url = config.environmentUrl ?? 'http://localhost:3000/';
-  created ??= { name, url, window: createWindow(name, config.rootDir ?? process.cwd(), url) };
-  current = { ...created, ...populate(created.window) };
+  if (!created.has(name)) {
+    const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
+    created.set(name, { name, url, window });
+  }
+  current = { ...created.get(name), ...populate(created.get(name).window) };
   return current;
+}
+
+const DOCBLOCK_ENVIRONMENT = /@(?:vitest|jest)-environment\s+([\w-]+)/;
+
+// The environment a file asks for in its leading comment (`@vitest-environment jsdom`, or Jest's), if any.
+function environmentOf(file) {
+  let head;
+  try {
+    head = fs.readFileSync(file, 'utf8').slice(0, 2048);
+  } catch {
+    return null;
+  }
+  const comment = /^\s*(?:\/\*[\s\S]*?\*\/|(?:\/\/[^\n]*\n\s*)+)/.exec(head)?.[0] ?? '';
+  const name = DOCBLOCK_ENVIRONMENT.exec(comment)?.[1];
+  return name ? name.replace(/^jest-environment-/, '') : null;
 }
 
 function clearCookies(document) {
@@ -259,4 +300,4 @@ function teardown() {
   clearPage(window, url);
 }
 
-module.exports = { install, teardown };
+module.exports = { install, teardown, environmentOf };
