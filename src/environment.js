@@ -150,6 +150,9 @@ const FROM_WINDOW = {
 
 const SELF_REFERENCES = ['window', 'self', 'top', 'parent'];
 
+// jsdom moves a window to another origin only through the JSDOM that made it.
+const jsdoms = new WeakMap();
+
 // environmentOptions takes vitest's shape: { happyDOM: {...}, jsdom: {...} }, passed to the constructors.
 function createWindow(name, rootDir, url, options = {}) {
   if (name === 'happy-dom') {
@@ -164,11 +167,13 @@ function createWindow(name, rootDir, url, options = {}) {
     });
   }
   const { JSDOM } = load('jsdom', rootDir);
-  return new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
     pretendToBeVisual: true,
     ...options.jsdom,
     url: options.jsdom?.url ?? url,
-  }).window;
+  });
+  jsdoms.set(dom.window, dom);
+  return dom.window;
 }
 
 function shouldCopy(key, fromWindow) {
@@ -287,8 +292,16 @@ function clearPage(window, url) {
   [document.body, document.documentElement].forEach((element) => {
     [...element.attributes].forEach(({ name }) => element.removeAttribute(name));
   });
-  if (window.location.href !== url) {
+  if (window.location.href === url) {
+    return;
+  }
+  // history can only move within the origin; a test that navigated elsewhere needs the engine's own way back.
+  if (new URL(window.location.href).origin === new URL(url).origin) {
     window.history.replaceState(null, '', url);
+  } else if (window.happyDOM?.setURL) {
+    window.happyDOM.setURL(url);
+  } else {
+    jsdoms.get(window)?.reconfigure({ url });
   }
 }
 
