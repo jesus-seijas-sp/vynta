@@ -352,7 +352,9 @@ function clearPage(window, url, navigator) {
   clearCookies(document);
   window.localStorage?.clear();
   window.sessionStorage?.clear();
-  document.head.replaceChildren();
+  // A <style> stays: a library loaded once per thread (aphrodite, emotion) keeps writing into the one it
+  // made, and with it gone its sheet is null. Everything else in the head goes.
+  [...document.head.childNodes].filter((node) => node.nodeName !== 'STYLE').forEach((node) => node.remove());
   document.body.replaceChildren();
   [document.body, document.documentElement].forEach((element) => {
     [...element.attributes].forEach(({ name }) => element.removeAttribute(name));
