@@ -81,6 +81,49 @@ function probePackageSubpath(specifier, fromDir) {
   }
 }
 
+// The conditions Node matches when it imports a package, in its order of preference.
+const IMPORT_CONDITIONS = new Set(['node', 'import', 'module-sync', 'default']);
+
+// The path an "exports" target gives under those conditions (the first matching key wins, as in Node).
+function exportTarget(target) {
+  if (typeof target === 'string') {
+    return target;
+  }
+  if (Array.isArray(target)) {
+    return target.map(exportTarget).find(Boolean) ?? null;
+  }
+  if (target && typeof target === 'object') {
+    const key = Object.keys(target).find((condition) => IMPORT_CONDITIONS.has(condition));
+    return key ? exportTarget(target[key]) : null;
+  }
+  return null;
+}
+
+// The file `import 'pkg'` loads, which for a package shipping both builds is not the one require()
+// resolves to. A mock built from the other build would share no state with the code under test.
+function resolveImportFile(specifier, fromDir) {
+  const parts = specifier.split('/');
+  const nameLength = specifier.startsWith('@') ? 2 : 1;
+  const name = parts.slice(0, nameLength).join('/');
+  const subpath = parts.slice(nameLength).join('/');
+  for (let dir = fromDir; ; dir = path.dirname(dir)) {
+    const packageDir = path.join(dir, 'node_modules', name);
+    const manifest = readManifest(path.join(packageDir, 'package.json'));
+    if (manifest) {
+      const { exports } = manifest;
+      if (!exports) {
+        return null;
+      }
+      const sugar = typeof exports === 'string' || Array.isArray(exports) || !Object.keys(exports)[0]?.startsWith('.');
+      const target = exportTarget((sugar ? { '.': exports } : exports)[subpath ? `./${subpath}` : '.']);
+      return target ? probe(path.join(packageDir, target)) : null;
+    }
+    if (path.dirname(dir) === dir) {
+      return null;
+    }
+  }
+}
+
 // The file a specifier names, or null when it names none and Node should answer.
 function resolveFile(specifier, fromDir) {
   const key = `${fromDir} ${specifier}`;
@@ -125,4 +168,4 @@ function parentDir(parentURL) {
   }
 }
 
-module.exports = { configure, mapSpecifier, mapToFile, resolveFile, parentDir };
+module.exports = { configure, mapSpecifier, mapToFile, resolveFile, resolveImportFile, parentDir };

@@ -4,6 +4,7 @@ const path = require('node:path');
 const { createRequire, isBuiltin } = require('node:module');
 const { pathToFileURL } = require('node:url');
 const state = require('../state');
+const { resolveImportFile } = require('../resolve-paths');
 const { automock } = require('./automock');
 
 // Query that marks an import as the real module, which the resolve hook must not replace by its mock.
@@ -57,7 +58,9 @@ function importActual(entry) {
   if (entry.key.startsWith('node:')) {
     return import(entry.key);
   }
-  const file = path.isAbsolute(entry.key) ? entry.key : resolveToFile(entry);
+  const from = entry.from && path.isAbsolute(entry.from) ? path.dirname(entry.from) : process.cwd();
+  const imported = entry.specifier && isBare(entry.specifier) ? resolveImportFile(entry.specifier, from) : null;
+  const file = imported ?? (path.isAbsolute(entry.key) ? entry.key : resolveToFile(entry));
   if (!file) {
     return import(entry.key);
   }

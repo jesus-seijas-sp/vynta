@@ -29,7 +29,7 @@ function requireActual(specifier) {
 
 function importActual(specifier) {
   const from = callerFile();
-  return importEntry({ key: resolveKey(specifier, from) });
+  return importEntry({ key: resolveKey(specifier, from), specifier, from });
 }
 
 // The mocked version of a module, whether it is mocked or not.
