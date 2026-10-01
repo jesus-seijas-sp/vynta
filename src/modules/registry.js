@@ -5,6 +5,7 @@ const { createRequire, isBuiltin } = require('node:module');
 const { pathToFileURL } = require('node:url');
 const state = require('../state');
 const { resolveImportFile } = require('../resolve-paths');
+const { orderMocks } = require('./mock-order');
 const { automock } = require('./automock');
 
 // Query that marks an import as the real module, which the resolve hook must not replace by its mock.
@@ -118,6 +119,21 @@ function exportedNames(key) {
   );
 }
 
+// Runs a deferred factory as its module is imported. The ES module hooks are synchronous, so the
+// factory must be too.
+function settleDeferred(entry) {
+  if (entry.factory.constructor.name === 'AsyncFunction') {
+    throw new Error(
+      `The async mock factory of "${entry.specifier}" was needed before it could run: it reads a variable declared after it, or an automocked module imports it`
+    );
+  }
+  const exports = entry.factory(() => importActual(entry));
+  if (isThenable(exports)) {
+    throw new Error(`The mock factory of "${entry.specifier}" returned a promise where it had to run synchronously`);
+  }
+  Object.assign(entry, { ready: true, deferred: false, exports });
+}
+
 // The modules a test file mocks, with vi.mock() / jest.mock(). Emptied when the file ends.
 class ModuleMocks {
   constructor() {
@@ -185,17 +201,34 @@ class ModuleMocks {
   // Settles every mock for the ES module loader, whose hooks are synchronous: runs the (maybe async) factories and
   // imports what automocks need, before the test file imports anything.
   async prepare() {
-    // Factories first: an automock imports the real module, and the mocked modules it imports in turn
-    // must be ready by then.
-    const pending = [...this.entries.values()]
-      .filter((entry) => !entry.ready)
-      .sort((a, b) => Number(!a.factory) - Number(!b.factory));
+    // Each after the mocks its real module imports. A mock with a synchronous factory imported before
+    // its turn settles there and then, as vitest's would.
+    const pending = orderMocks(
+      [...this.entries.values()].filter((entry) => !entry.ready),
+      (key, specifier) => this.lookup(key, specifier),
+      resolveKey
+    );
     for (let i = 0; i < pending.length; i += 1) {
       const entry = pending[i];
+      if (entry.ready) {
+        // eslint-disable-next-line no-continue -- settled when something imported it first
+        continue;
+      }
       entry.preparing = true;
       let exports;
       if (entry.factory) {
-        exports = await entry.factory(() => importActual(entry));
+        try {
+          exports = await entry.factory(() => importActual(entry));
+        } catch (error) {
+          if (!(error instanceof ReferenceError)) {
+            throw error;
+          }
+          // The factory reads a variable the file declares further down, which vitest allows: it runs a
+          // factory when the module is first imported. This one waits for that import.
+          Object.assign(entry, { preparing: false, deferred: true });
+          // eslint-disable-next-line no-continue -- the entry stays unsettled until it is imported
+          continue;
+        }
       } else {
         const actual = await importActual(entry);
         const { manual, exports: mocked } = mockWithoutFactory(entry, () => actual);
@@ -210,6 +243,9 @@ class ModuleMocks {
   // out; vitest's mock is a proxy that allows it, and code that never touches the name still runs.
   moduleSource(key) {
     const entry = this.entries.get(key);
+    if (entry && !entry.ready && entry.factory && !entry.preparing) {
+      settleDeferred(entry);
+    }
     if (!entry?.ready) {
       throw new Error(`The mock of "${entry?.specifier ?? key}" was not ready: call vi.mock() at the top of the file`);
     }
