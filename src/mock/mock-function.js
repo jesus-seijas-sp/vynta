@@ -54,7 +54,8 @@ function fn(implementation) {
   function mockFn(...args) {
     mockState.calls.push(args);
     mockState.contexts.push(this);
-    mockState.instances.push(new.target ? this : undefined);
+    // As in Jest and vitest: the receiver of every call, not only of those made with new.
+    mockState.instances.push(this);
     invocationOrder += 1;
     mockState.invocationCallOrder.push(invocationOrder);
     mockState.lastCall = args;

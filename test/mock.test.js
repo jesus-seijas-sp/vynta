@@ -13,6 +13,7 @@ describe('vi.fn', () => {
       { type: 'return', value: 7 },
     ]);
     expect(fn.mock.contexts[1]).toBe(context);
+    expect(fn.mock.instances[1]).toBe(context);
     expect(fn.mock.lastCall).toEqual([3, 4]);
     expect(fn).toHaveBeenCalledTimes(2);
     expect(fn).toHaveBeenLastCalledWith(3, 4);
