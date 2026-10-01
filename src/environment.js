@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const { jsdomBridges } = require('./jsdom-bridges');
 const { trackListeners, releaseListeners } = require('./listeners');
+const { callingPackage } = require('./collect/api');
 const path = require('node:path');
 const Module = require('node:module');
 
@@ -286,6 +287,26 @@ function prototypesOf(window) {
   return [...prototypes].map((prototype) => [prototype, ownDescriptors(prototype)]);
 }
 
+const insertedByDependency = new WeakSet();
+
+// Marks what package code inserts into the head, which outlives the file (see clearPage).
+function trackHead(head) {
+  ['appendChild', 'insertBefore', 'append', 'prepend'].forEach((method) => {
+    const original = head[method];
+    Object.defineProperty(head, method, {
+      configurable: true,
+      writable: true,
+      value: function trackedInsert(...args) {
+        if (callingPackage()) {
+          const nodes = method === 'append' || method === 'prepend' ? args : [args[0]];
+          nodes.filter((node) => typeof node === 'object' && node).forEach((node) => insertedByDependency.add(node));
+        }
+        return original.apply(this, args);
+      },
+    });
+  });
+}
+
 // One window per environment and thread, made the first time a file asks for it.
 const created = new Map();
 
@@ -299,6 +320,9 @@ function install(config = {}) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
     // Before the prototypes are taken, so the restore between files keeps the tracking in place.
     trackListeners(window);
+    if (window.document?.head) {
+      trackHead(window.document.head);
+    }
     created.set(name, {
       name,
       url,
@@ -355,9 +379,10 @@ function clearPage(window, url, navigator) {
   clearCookies(document);
   window.localStorage?.clear();
   window.sessionStorage?.clear();
-  // A <style> stays: a library loaded once per thread (aphrodite, emotion) keeps writing into the one it
-  // made, and with it gone its sheet is null. Everything else in the head goes.
-  [...document.head.childNodes].filter((node) => node.nodeName !== 'STYLE').forEach((node) => node.remove());
+  // What a library put in the head stays: one loaded once per thread (aphrodite) keeps writing into the
+  // <style> it made, and with it gone its sheet is null. What the file put there (a test's own <style>)
+  // goes, as it would with a fresh document.
+  [...document.head.childNodes].filter((node) => !insertedByDependency.has(node)).forEach((node) => node.remove());
   document.body.replaceChildren();
   [document.body, document.documentElement].forEach((element) => {
     [...element.attributes].forEach(({ name }) => element.removeAttribute(name));
