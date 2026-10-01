@@ -253,6 +253,38 @@ function restoreOwn(target, descriptors) {
   descriptors.forEach((descriptor, key) => Reflect.defineProperty(target, key, descriptor));
 }
 
+// Only what changed is put back: there are hundreds of prototypes and few ever change.
+function restoreChanged(target, descriptors) {
+  Reflect.ownKeys(target)
+    .filter((key) => !descriptors.has(key))
+    .forEach((key) => Reflect.deleteProperty(target, key));
+  descriptors.forEach((descriptor, key) => {
+    const now = Reflect.getOwnPropertyDescriptor(target, key);
+    if (!now || now.value !== descriptor.value || now.get !== descriptor.get || now.set !== descriptor.set) {
+      Reflect.defineProperty(target, key, descriptor);
+    }
+  });
+}
+
+// The prototypes of a window's interfaces (Element, Range, Document...), as the window was made. A file
+// that patches one (a stub of getClientRects for an editor) would otherwise leave it patched for every
+// file after it, where a fresh window would not.
+function prototypesOf(window) {
+  const prototypes = new Set();
+  windowKeys(window).forEach((key) => {
+    let value;
+    try {
+      value = window[key];
+    } catch {
+      return;
+    }
+    if (typeof value === 'function' && value.prototype && typeof value.prototype === 'object') {
+      prototypes.add(value.prototype);
+    }
+  });
+  return [...prototypes].map((prototype) => [prototype, ownDescriptors(prototype)]);
+}
+
 // One window per environment and thread, made the first time a file asks for it.
 const created = new Map();
 
@@ -264,7 +296,13 @@ function install(config = {}) {
   const url = config.environmentUrl ?? 'http://localhost:3000/';
   if (!created.has(name)) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
-    created.set(name, { name, url, window, navigator: ownDescriptors(window.navigator) });
+    created.set(name, {
+      name,
+      url,
+      window,
+      navigator: ownDescriptors(window.navigator),
+      prototypes: prototypesOf(window),
+    });
   }
   const { window } = created.get(name);
   const populated = populate(window, name);
@@ -337,7 +375,7 @@ function teardown() {
   if (!current) {
     return;
   }
-  const { window, url, keys, originals, navigator } = current;
+  const { window, url, keys, originals, navigator, prototypes } = current;
   current = null;
   [...keys, ...SELF_REFERENCES].forEach((key) => {
     const original = originals.get(key);
@@ -348,6 +386,7 @@ function teardown() {
     }
   });
   clearPage(window, url, navigator);
+  prototypes.forEach(([prototype, descriptors]) => restoreChanged(prototype, descriptors));
 }
 
 module.exports = { install, teardown, environmentOf };
