@@ -14,6 +14,9 @@ const DEFAULTS = {
   setupFiles: [],
   // Project modules are loaded fresh for every test file; node_modules stay loaded.
   isolate: true,
+  // Packages loaded fresh for every test file too: those that keep state of their own at module level,
+  // as MSW does with its interceptors, which a file would otherwise inherit from the one before.
+  isolateDependencies: [],
   // threads: worker threads; inline: everything in the main thread.
   pool: 'threads',
   maxWorkers: undefined,

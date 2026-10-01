@@ -74,13 +74,19 @@ function hookCjs() {
 
 // ES modules can not be evicted from the cache, so each test file imports its own copy of the project modules,
 // told apart by a query string. Dependencies in node_modules are shared.
+let isolatedDependencies = [];
+
+function isIsolatedDependency(location) {
+  return isolatedDependencies.some((name) => location.includes(`${path.sep}node_modules${path.sep}${name}${path.sep}`));
+}
+
 function isolatedUrl(url, conditions) {
-  const isProjectModule =
+  const isolated =
     url.startsWith('file:') &&
-    !url.includes('/node_modules/') &&
     !url.startsWith(RUNTIME_URL) &&
-    !url.includes('vynta=');
-  if (!isProjectModule || state.generation === 0 || !conditions.includes('import')) {
+    !url.includes('vynta=') &&
+    (!url.includes('/node_modules/') || isIsolatedDependency(fileURLToPath(url)));
+  if (!isolated || state.generation === 0 || !conditions.includes('import')) {
     return url;
   }
   return `${url}${url.includes('?') ? '&' : '?'}vynta=${state.generation}`;
@@ -237,6 +243,7 @@ function checkSupported(file) {
 
 // Loads a test or setup file. `fresh` evaluates it again even when it is cached (setup files run for every file).
 async function loadModule(file, config, fresh) {
+  isolatedDependencies = (config.isolateDependencies ?? []).map((name) => name.split('/').join(path.sep));
   configureResolution(config);
   configureTransform(config);
   hookCjs();
@@ -261,7 +268,7 @@ async function loadModule(file, config, fresh) {
 function isolateModules() {
   state.generation += 1;
   Object.keys(require.cache)
-    .filter((key) => !key.includes(NODE_MODULES) && !key.startsWith(RUNTIME_DIR))
+    .filter((key) => (!key.includes(NODE_MODULES) || isIsolatedDependency(key)) && !key.startsWith(RUNTIME_DIR))
     .forEach((key) => {
       delete require.cache[key];
     });
