@@ -1,6 +1,7 @@
 const Module = require('node:module');
 const util = require('node:util');
 const state = require('./state');
+const { realTimers } = require('./timers/real-timers');
 const { setColors } = require('./colors');
 const { CoverageCollector } = require('./coverage/collector');
 const { installGlobals } = require('./index');
@@ -9,7 +10,12 @@ const { runFile, reportUncaught } = require('./run/run-file');
 const { mocks } = require('./modules/registry');
 const { ResolveCache } = require('./resolve-cache');
 const { releaseStubs } = require('./vi');
-const { install: installEnvironment, teardown: teardownEnvironment, environmentOf } = require('./environment');
+const {
+  install: installEnvironment,
+  teardown: teardownEnvironment,
+  settle: settleEnvironment,
+  environmentOf,
+} = require('./environment');
 const globalSnapshot = require('./global-snapshot');
 const { loadPlugins } = require('./plugins');
 
@@ -47,6 +53,22 @@ function shimProcessSend() {
   };
 }
 
+let settling = false;
+
+// Aborts the finished file's pending document work, and lets the rejections that causes go by.
+async function settle() {
+  settling = true;
+  try {
+    await settleEnvironment();
+  } catch {
+    // A document that can not be stopped is torn down all the same.
+  }
+  await new Promise((resolve) => {
+    realTimers.setImmediate(resolve);
+  });
+  settling = false;
+}
+
 function catchUncaught() {
   process.on('uncaughtException', (error) => {
     if (!reportUncaught(error)) {
@@ -54,6 +76,10 @@ function catchUncaught() {
     }
   });
   process.on('unhandledRejection', (reason) => {
+    // What stopping a finished file's document rejects is no one's failure.
+    if (settling && reason?.name === 'AbortError') {
+      return;
+    }
     // A test listening for unhandled rejections itself has taken them on, as in plain Node.
     if (process.listenerCount('unhandledRejection') > 1) {
       return;
@@ -107,6 +133,7 @@ async function createRuntime(config) {
       switchEnvironment(wanted);
     }
     const result = await runFile(path, { ...config, environment: wanted }, shard);
+    await settle();
     releaseStubs();
     mocks.clear();
     // Before the modules of the file are released.

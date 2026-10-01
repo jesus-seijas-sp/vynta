@@ -389,4 +389,10 @@ function teardown() {
   prototypes.forEach(([prototype, descriptors]) => restoreChanged(prototype, descriptors));
 }
 
-module.exports = { install, teardown, environmentOf };
+// Stops what the file left running in the document (a fetch still in flight, a timer of the window's),
+// as closing its window does under vitest: otherwise it lands in the next file, mid-test.
+async function settle() {
+  await current?.window.happyDOM?.abort?.();
+}
+
+module.exports = { install, teardown, settle, environmentOf };
