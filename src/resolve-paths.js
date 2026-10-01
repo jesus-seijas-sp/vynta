@@ -35,12 +35,21 @@ function mapSpecifier(specifier) {
   );
 }
 
+// Files and manifests do not change during a run, and resolution asks about the same ones over and over.
+const files = new Map();
+const manifests = new Map();
+
 function isFile(candidate) {
-  try {
-    return fs.statSync(candidate).isFile();
-  } catch {
-    return false;
+  if (!files.has(candidate)) {
+    let found = false;
+    try {
+      found = fs.statSync(candidate).isFile();
+    } catch {
+      found = false;
+    }
+    files.set(candidate, found);
   }
+  return files.get(candidate);
 }
 
 function probe(filePath) {
@@ -52,11 +61,16 @@ function probe(filePath) {
 }
 
 function readManifest(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
+  if (!manifests.has(file)) {
+    let manifest = null;
+    try {
+      manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      manifest = null;
+    }
+    manifests.set(file, manifest);
   }
+  return manifests.get(file);
 }
 
 // "pkg/sub/path" into a package with no "exports": bundlers probe it like a relative path, while

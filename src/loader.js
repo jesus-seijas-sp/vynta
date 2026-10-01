@@ -113,6 +113,8 @@ function commonJsInterop(file) {
   ].join('\n');
 }
 
+const bareResolutions = new Map();
+
 function hookEsm(config) {
   if (hooked.esm || typeof Module.registerHooks !== 'function') {
     return;
@@ -128,9 +130,20 @@ function hookEsm(config) {
       const from = parentDir(context.parentURL);
       const mapped = mapToFile(specifier, from);
       const request = mapped ? pathToFileURL(mapped).href : specifier;
-      let result;
+      // Where a package name leads from a directory does not change during a run, and Node looks it up
+      // again (package.json exports, file probes) for every test file that imports it.
+      const bare = !/^(?:[./]|file:|node:|data:)/.test(request);
+      const key = bare ? `${request}\0${from}\0${context.conditions.join(',')}` : null;
+      let result = key ? bareResolutions.get(key) : undefined;
+      if (result) {
+        const url = isolate ? isolatedUrl(result.url, context.conditions) : result.url;
+        return { ...result, url, shortCircuit: true };
+      }
       try {
         result = nextResolve(request, context);
+        if (key) {
+          bareResolutions.set(key, result);
+        }
       } catch (error) {
         // Node names no file for "./Language" or "../lib/util"; a bundler would.
         const file = resolveFile(request, from);

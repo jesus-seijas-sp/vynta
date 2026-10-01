@@ -49,6 +49,7 @@ function loadingCaches(rootDir) {
   return {
     resolveCache: { file: cacheFile(rootDir), stamp: dependencyStamp(rootDir) },
     compileCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vynta', 'v8'),
+    transformCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vynta', 'compiled'),
   };
 }
 

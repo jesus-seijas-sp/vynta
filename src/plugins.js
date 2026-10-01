@@ -44,4 +44,6 @@ function applyPlugins(code, file) {
   }, code);
 }
 
-module.exports = { loadPlugins, applyPlugins };
+const pluginNames = () => plugins.map((plugin) => plugin.name ?? '?');
+
+module.exports = { loadPlugins, applyPlugins, pluginNames };

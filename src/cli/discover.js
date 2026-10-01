@@ -51,10 +51,30 @@ function filterByPatterns(files, root, patterns) {
   });
 }
 
+const isFile = (file) => {
+  try {
+    return fs.statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
+
 function discover(config, patterns = []) {
   const include = config.include.map(globToRegExp);
   const exclude = config.exclude.map(globToRegExp);
   const ignore = config.excludePatterns.map((pattern) => new RegExp(pattern));
+  // Files named one by one (an editor, a CI shard) are taken as they are, without walking the project.
+  const named = patterns.map((pattern) => path.resolve(config.rootDir, pattern));
+  if (named.length > 0 && named.every(isFile)) {
+    return [...new Set(named)].filter((file) => {
+      const relative = toPosix(path.relative(config.rootDir, file));
+      return (
+        include.some((regex) => regex.test(relative)) &&
+        !exclude.some((regex) => regex.test(relative)) &&
+        !ignore.some((regex) => regex.test(toPosix(file)))
+      );
+    });
+  }
   const files = config.roots
     .flatMap((root) => walk(path.resolve(config.rootDir, root), include, exclude))
     .filter((file) => !ignore.some((regex) => regex.test(toPosix(file))));

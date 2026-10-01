@@ -1,6 +1,7 @@
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { applyPlugins } = require('./plugins');
+const { applyPlugins, pluginNames } = require('./plugins');
 const Module = require('node:module');
 const { expand: expandGlobImports } = require('./glob-imports');
 
@@ -87,9 +88,12 @@ function jsonSource(file) {
   return `export default ${fs.readFileSync(file, 'utf8')};\n`;
 }
 
+let compiledDir = null;
+
 function configure(config = {}) {
   rootDir = config.rootDir ?? process.cwd();
   enabled = config.transform !== false;
+  compiledDir = config.transformCacheDir ?? null;
   cache.clear();
 }
 
@@ -203,8 +207,54 @@ function compile(rawSource, file) {
   }).outputText;
 }
 
+// Each test file imports its own copy of the project's modules, so the same file is compiled again for
+// every test file that reaches it. The output is kept: in memory for the thread, and on disk between runs,
+// keyed by the source and what compiles it. A file with import.meta.glob depends on which files exist too,
+// so it is only kept in memory.
+const compiled = new Map();
+
+function compiledKey(source, file) {
+  const { name, module: transformer } = findTransformer();
+  const plugins = pluginNames().join(',');
+  return crypto
+    .createHash('sha1')
+    .update(`${file}\0${name}@${transformer?.version ?? ''}\0${plugins}\0${source}`)
+    .digest('hex');
+}
+
+function readCompiled(key) {
+  try {
+    return fs.readFileSync(path.join(compiledDir, `${key}.js`), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function writeCompiled(key, code) {
+  try {
+    fs.mkdirSync(compiledDir, { recursive: true });
+    fs.writeFileSync(path.join(compiledDir, `${key}.js`), code);
+  } catch {
+    // A cache that can not be written only costs the next run the compile.
+  }
+}
+
 function transform(rawSource, file) {
-  return withPaths(compile(rawSource, file));
+  const kept = compiled.get(file);
+  if (kept?.source === rawSource) {
+    return kept.code;
+  }
+  const onDisk = compiledDir && !rawSource.includes('import.meta.glob');
+  const key = onDisk ? compiledKey(rawSource, file) : null;
+  let code = key ? readCompiled(key) : null;
+  if (code === null) {
+    code = withPaths(compile(rawSource, file));
+    if (key && code !== null) {
+      writeCompiled(key, code);
+    }
+  }
+  compiled.set(file, { source: rawSource, code });
+  return code;
 }
 
 function transformerName() {
