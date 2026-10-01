@@ -24,6 +24,15 @@ function resolveKey(specifier, from) {
   if (isBuiltin(specifier)) {
     return specifier.startsWith('node:') ? specifier : `node:${specifier}`;
   }
+  // A package's own paths go by the file an import loads: under require() an exports map may send
+  // several of them to one file (every icon of @phosphor-icons/react to its CommonJS bundle), and their
+  // mocks would replace each other.
+  if (isBare(specifier) && from && path.isAbsolute(from)) {
+    const imported = resolveImportFile(specifier, path.dirname(from));
+    if (imported) {
+      return imported;
+    }
+  }
   try {
     return createRequire(from).resolve(specifier);
   } catch {

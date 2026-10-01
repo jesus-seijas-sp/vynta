@@ -99,6 +99,28 @@ function exportTarget(target) {
   return null;
 }
 
+// The target of a subpath in an exports map: its own key, or else the pattern ('./dist/*') with the
+// longest prefix that matches, its '*' filled in, as Node resolves it.
+function exportedPath(exportsMap, subpath) {
+  if (subpath in exportsMap) {
+    return exportTarget(exportsMap[subpath]);
+  }
+  const pattern = Object.keys(exportsMap)
+    .filter((key) => {
+      const [prefix, suffix = ''] = key.split('*');
+      return (
+        key.includes('*') && subpath.startsWith(prefix) && subpath.endsWith(suffix) && subpath.length >= key.length - 1
+      );
+    })
+    .sort((a, b) => b.indexOf('*') - a.indexOf('*'))[0];
+  if (!pattern) {
+    return null;
+  }
+  const [prefix, suffix = ''] = pattern.split('*');
+  const star = subpath.slice(prefix.length, subpath.length - suffix.length);
+  return exportTarget(exportsMap[pattern])?.replaceAll('*', star) ?? null;
+}
+
 // The file `import 'pkg'` loads, which for a package shipping both builds is not the one require()
 // resolves to. A mock built from the other build would share no state with the code under test.
 function resolveImportFile(specifier, fromDir) {
@@ -115,7 +137,7 @@ function resolveImportFile(specifier, fromDir) {
         return null;
       }
       const sugar = typeof exports === 'string' || Array.isArray(exports) || !Object.keys(exports)[0]?.startsWith('.');
-      const target = exportTarget((sugar ? { '.': exports } : exports)[subpath ? `./${subpath}` : '.']);
+      const target = exportedPath(sugar ? { '.': exports } : exports, subpath ? `./${subpath}` : '.');
       return target ? probe(path.join(packageDir, target)) : null;
     }
     if (path.dirname(dir) === dir) {
