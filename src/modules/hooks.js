@@ -85,6 +85,7 @@ function installEsm() {
     throw new Error('vi.mock() needs Node.js 22.15 or later (module.registerHooks)');
   }
   installed.esm = true;
+  state.loaderHooks = true;
   Module.registerHooks({ resolve: resolveHook, load: loadHook });
 }
 

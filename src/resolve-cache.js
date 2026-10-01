@@ -41,6 +41,9 @@ class ResolveCache {
   constructor(entries = {}) {
     this.entries = new Map(Object.entries(entries));
     this.added = {};
+    // Resolutions to files of the project, for this thread only: each test file loads the project again, and
+    // resolving costs Node a package.json lookup (is it the package naming itself?) and file probes every time.
+    this.project = new Map();
   }
 
   static load({ file, stamp }) {
@@ -60,14 +63,19 @@ class ResolveCache {
         return resolveFilename.call(this, request, parent, isMain, options);
       }
       const key = `${path.dirname(parent.filename)}\0${request}`;
-      const cached = cache.entries.get(key);
+      const cached = cache.entries.get(key) ?? cache.project.get(key);
       if (cached) {
         return cached;
       }
       const resolved = resolveFilename.call(this, request, parent, isMain, options);
-      if (path.isAbsolute(resolved) && resolved.includes(NODE_MODULES)) {
+      if (!path.isAbsolute(resolved)) {
+        return resolved;
+      }
+      if (resolved.includes(NODE_MODULES)) {
         cache.entries.set(key, resolved);
         cache.added[key] = resolved;
+      } else {
+        cache.project.set(key, resolved);
       }
       return resolved;
     };

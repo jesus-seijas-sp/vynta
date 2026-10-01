@@ -4,6 +4,7 @@ const Module = require('node:module');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const state = require('./state');
 const { isSpyable, makeSpyable, markSpyable } = require('./modules/spyable');
+const { installCjsLoader } = require('./cjs-loader');
 const { configure: configureResolution, mapToFile, resolveFile, parentDir } = require('./resolve-paths');
 const {
   configure: configureTransform,
@@ -71,6 +72,7 @@ function hookCjs() {
     }
   };
   installAssetExtensions();
+  installCjsLoader();
 }
 
 // ES modules can not be evicted from the cache, so each test file imports its own copy of the project modules,
@@ -120,6 +122,8 @@ function hookEsm(config) {
     return;
   }
   hooked.esm = true;
+  // From now on CommonJS sources go through these hooks too, which only Node's own loader runs.
+  state.loaderHooks = true;
   const isolate = config.isolate !== false;
   Module.registerHooks({
     resolve(specifier, context, nextResolve) {
