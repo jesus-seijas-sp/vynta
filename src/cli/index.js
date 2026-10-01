@@ -1,3 +1,4 @@
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { version } = require('../../package.json');
@@ -51,6 +52,34 @@ function loadingCaches(rootDir) {
   };
 }
 
+// Node settles the default locale of Intl as the process starts. A config that sets one (vitest
+// configs set LC_ALL so dates format the same on every machine) is only heard by a process started
+// after it, so vynta starts again with it, once. TZ needs nothing: Node reads it whenever it changes.
+const LOCALE_VARIABLES = [
+  'LC_ALL',
+  'LC_TIME',
+  'LC_NUMERIC',
+  'LC_MONETARY',
+  'LC_COLLATE',
+  'LC_CTYPE',
+  'LC_MESSAGES',
+  'LANG',
+];
+const startLocale = LOCALE_VARIABLES.map((name) => process.env[name]);
+const RELAUNCHED = 'VYNTA_LOCALE_RELAUNCHED';
+
+function localeChanged() {
+  return !process.env[RELAUNCHED] && LOCALE_VARIABLES.some((name, i) => process.env[name] !== startLocale[i]);
+}
+
+function relaunch(argv) {
+  const { status, signal } = spawnSync(process.execPath, [...process.execArgv, process.argv[1], ...argv], {
+    stdio: 'inherit',
+    env: { ...process.env, [RELAUNCHED]: '1' },
+  });
+  return signal ? 1 : (status ?? 1);
+}
+
 async function main(argv = process.argv.slice(2)) {
   const start = realTimers.performanceNow();
   const cli = parseCli(argv);
@@ -67,6 +96,9 @@ async function main(argv = process.argv.slice(2)) {
 `);
   }
   const config = await loadConfig(cli.options);
+  if (localeChanged()) {
+    return relaunch(argv);
+  }
   config.colors ??= detectColors();
   setColors(config.colors);
   const timings = new Timings(config.rootDir);
