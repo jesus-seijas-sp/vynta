@@ -54,6 +54,10 @@ function catchUncaught() {
     }
   });
   process.on('unhandledRejection', (reason) => {
+    // A test listening for unhandled rejections itself has taken them on, as in plain Node.
+    if (process.listenerCount('unhandledRejection') > 1) {
+      return;
+    }
     if (!reportUncaught(reason)) {
       throw reason;
     }
