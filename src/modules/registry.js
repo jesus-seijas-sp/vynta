@@ -185,7 +185,11 @@ class ModuleMocks {
   // Settles every mock for the ES module loader, whose hooks are synchronous: runs the (maybe async) factories and
   // imports what automocks need, before the test file imports anything.
   async prepare() {
-    const pending = [...this.entries.values()].filter((entry) => !entry.ready);
+    // Factories first: an automock imports the real module, and the mocked modules it imports in turn
+    // must be ready by then.
+    const pending = [...this.entries.values()]
+      .filter((entry) => !entry.ready)
+      .sort((a, b) => Number(!a.factory) - Number(!b.factory));
     for (let i = 0; i < pending.length; i += 1) {
       const entry = pending[i];
       let exports;

@@ -166,8 +166,20 @@ function esbuildOptions(file) {
   };
 }
 
+const USES_PATHS = /\b__(?:dirname|filename)\b/;
+const DECLARES_PATHS = /\b(?:const|let|var|function)\s+__(?:dirname|filename)\b/;
+
+// Vite gives a test file the CommonJS __dirname and __filename, which an ES module lacks. Prepended
+// on the first line, so the source map's lines still match.
+function withPaths(code) {
+  if (code === null || !USES_PATHS.test(code) || DECLARES_PATHS.test(code)) {
+    return code;
+  }
+  return `const __dirname = import.meta.dirname, __filename = import.meta.filename;${code}`;
+}
+
 // The source with JSX (and any types) compiled away, or null when the project has no transformer.
-function transform(rawSource, file) {
+function compile(rawSource, file) {
   const source = expandGlobImports(rawSource, file);
   const { name, module: transformer } = findTransformer();
   if (!name) {
@@ -188,6 +200,10 @@ function transform(rawSource, file) {
     compilerOptions: { jsx: transformer.JsxEmit.ReactJSX, target: 'ESNext', module: 'ESNext' },
     fileName: file,
   }).outputText;
+}
+
+function transform(rawSource, file) {
+  return withPaths(compile(rawSource, file));
 }
 
 function transformerName() {
