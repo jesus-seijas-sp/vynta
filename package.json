@@ -1,0 +1,68 @@
+{
+  "name": "vynta",
+  "version": "0.1.0",
+  "description": "A very fast, zero-dependency test runner with a Jest/Vitest compatible API",
+  "homepage": "https://github.com/jesus-seijas-sp/vynta#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jesus-seijas-sp/vynta.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jesus-seijas-sp/vynta/issues"
+  },
+  "main": "./src/index.js",
+  "type": "commonjs",
+  "bin": {
+    "vynta": "./bin/vynta.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs",
+      "require": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "src",
+    "bench/compare.js"
+  ],
+  "scripts": {
+    "test": "node bin/vynta.js",
+    "lint": "eslint .",
+    "lintfix": "eslint --fix ."
+  },
+  "keywords": [
+    "test",
+    "testing",
+    "runner",
+    "jest",
+    "vitest",
+    "expect",
+    "fast"
+  ],
+  "author": "Jesús Seijas <jseijas@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.0.0",
+    "prettier": "^3.8.0"
+  },
+  "vynta": {
+    "exclude": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "test/fixtures/**"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

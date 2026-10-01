@@ -1,0 +1,72 @@
+const { formatTitle, normalizeTable } = require('../src/collect/each');
+const { globToRegExp } = require('../src/cli/glob');
+const { diffLines } = require('../src/expect/diff');
+const { format } = require('../src/expect/format');
+
+describe('each titles', () => {
+  // As it.each(rows)(name).
+  const title = (name, rows) => normalizeTable([rows]).map((row, i) => formatTitle(name, row, i));
+
+  it('formats printf placeholders', () => {
+    expect(title('%s %d %i %f %j %p %# %$ %%', [['a', 1.5, 2.7, '3', { a: 1 }, 'p']])).toEqual([
+      'a 1.5 2 3 {"a":1} "p" 0 1 %',
+    ]);
+  });
+
+  it('interpolates $keys of object cases', () => {
+    expect(title('$a.b and $c', [{ a: { b: 1 }, c: 'x' }])).toEqual(['1 and "x"']);
+  });
+
+  it('takes single values as one argument', () => {
+    expect(title('value %s', [1, 2])).toEqual(['value 1', 'value 2']);
+  });
+});
+
+describe('glob', () => {
+  it.each([
+    ['**/*.test.js', 'a/b/c.test.js', true],
+    ['**/*.test.js', 'c.test.js', true],
+    ['**/*.test.js', 'c.test.jsx', false],
+    ['src/*.js', 'src/a/b.js', false],
+    ['*.{js,ts}', 'a.ts', true],
+    ['**/*.?(c|m)[jt]s', 'a.mjs', true],
+    ['**/*.?(c|m)[jt]s', 'a.xjs', false],
+    ['**/__tests__/**', 'src/__tests__/a/b.js', true],
+  ])('%s matches %s: %s', (glob, file, result) => {
+    expect(globToRegExp(glob).test(file)).toBe(result);
+  });
+});
+
+describe('diffLines', () => {
+  it('finds the shortest edit script', () => {
+    expect(diffLines(['a', 'b', 'c'], ['a', 'x', 'c', 'd'])).toEqual([
+      [' ', 'a'],
+      ['-', 'b'],
+      ['+', 'x'],
+      [' ', 'c'],
+      ['+', 'd'],
+    ]);
+    expect(diffLines([], [])).toEqual([]);
+  });
+});
+
+describe('format', () => {
+  it('prints values like pretty-format', () => {
+    expect(format({ b: [1, 'x'], a: new Map([[1, new Set([2])]]) })).toBe(
+      '{\n  "a": Map {\n    1 => Set {\n      2,\n    },\n  },\n  "b": [\n    1,\n    "x",\n  ],\n}'
+    );
+    expect(format({ a: [1, { b: 2 }] }, { min: true })).toBe('{"a": [1, {"b": 2}]}');
+    expect(format([-0, 1n, undefined, null, Symbol('s')], { min: true })).toBe('[-0, 1n, undefined, null, Symbol(s)]');
+  });
+
+  it('prints circular references, classes and errors', () => {
+    class Box {
+      constructor() {
+        this.self = this;
+      }
+    }
+    expect(format(new Box(), { min: true })).toBe('Box {"self": [Circular]}');
+    expect(format(new TypeError('bad'))).toBe('[TypeError: bad]');
+    expect(format(expect.any(Number))).toBe('Any<Number>');
+  });
+});

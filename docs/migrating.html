@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migrating from Jest or Vitest · vynta</title>
+    <meta name="description" content="Moving a Jest or Vitest suite to vynta: what runs as it is, the options it reads, and the few differences." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css?v=0.1.0" />
+    <script src="main.js?v=0.1.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <nav class="nav">
+          <a href="guide.html">Guide</a>
+          <a href="api.html">API</a>
+          <a class="hide-small" href="benchmarks.html">Benchmarks</a>
+          <a class="hide-small" href="migrating.html" aria-current="page">Migrating</a>
+          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="docs">
+      <button class="menu-toggle" type="button" aria-expanded="false">☰ Contents</button>
+      <aside class="sidebar">
+        <h4>Migrating</h4>
+        <ul>
+          <li><a href="#try">Try it first</a></li>
+          <li><a href="#jest">From Jest</a></li>
+          <li><a href="#jest-config">Jest options</a></li>
+          <li><a href="#jest-differences">Differences with Jest</a></li>
+          <li><a href="#vitest">From Vitest</a></li>
+          <li><a href="#vitest-config">Vitest options</a></li>
+          <li><a href="#vitest-differences">Differences with Vitest</a></li>
+          <li><a href="#missing">Not supported yet</a></li>
+        </ul>
+      </aside>
+
+      <article class="content">
+        <h1>Migrating from Jest or Vitest</h1>
+        <p class="intro">
+          vynta runs Jest and Vitest suites as they are. For most projects, migrating means installing it and changing
+          the <code>test</code> script. This page lists what vynta reads from your configuration and the few places
+          where it behaves differently.
+        </p>
+
+        <h2 id="try">Try it first</h2>
+        <p>Nothing has to change to try it. Install vynta and run it next to your current runner:</p>
+        <pre><code class="language-bash">npm install --save-dev vynta
+npx vynta</code></pre>
+        <p>
+          If every test passes, switch the script. If some fail, the sections below explain the usual reasons, from the
+          most common to the rarest.
+        </p>
+
+        <h2 id="jest">From Jest</h2>
+        <p>Your tests, your <code>jest.config.js</code> (or the <code>"jest"</code> key of <code>package.json</code>) and your flags keep working:</p>
+        <pre><code class="language-json">{
+  "scripts": {
+    "test": "vynta --silent --coverage"
+  }
+}</code></pre>
+        <ul>
+          <li>The globals: <code>describe</code>, <code>it</code>, <code>test</code>, <code>expect</code>, the hooks, <code>jest</code>, and the old <code>fail()</code>.</li>
+          <li>Imports from <code>@jest/globals</code>.</li>
+          <li><code>jest.fn</code>, <code>jest.spyOn</code>, <code>jest.mock</code> with its hoisting, <code>__mocks__</code> folders, automock, <code>jest.requireActual</code>, <code>jest.isolateModules</code>, fake timers.</li>
+          <li>Every matcher, asymmetric matchers, <code>expect.extend</code>, the <code>done</code> callback.</li>
+          <li>Your <code>.snap</code> files, read and written in Jest's format.</li>
+          <li>The flags <code>-t</code>, <code>-u</code>, <code>-i</code>, <code>--ci</code>, <code>--silent</code>, <code>--verbose</code>, <code>--coverage</code>, <code>--maxWorkers</code>, <code>--bail</code>, <code>--passWithNoTests</code>, and path patterns.</li>
+        </ul>
+
+        <h3 id="jest-config">Jest options vynta reads</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Jest option</th><th>In vynta</th></tr></thead>
+            <tbody>
+              <tr><td><code>testTimeout</code>, <code>maxWorkers</code>, <code>bail</code>, <code>maxConcurrency</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td><code>testMatch</code>, <code>roots</code>, <code>testPathIgnorePatterns</code></td><td><span class="check">✓</span> Which files are tests</td></tr>
+              <tr><td><code>setupFiles</code>, <code>setupFilesAfterEnv</code></td><td><span class="check">✓</span> Loaded before every test file</td></tr>
+              <tr><td><code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td><code>collectCoverage</code>, <code>collectCoverageFrom</code>, <code>coverageDirectory</code>, <code>coverageReporters</code>, <code>coverageThreshold</code></td><td><span class="check">✓</span> V8 coverage, text and lcov reports</td></tr>
+              <tr><td><code>testEnvironment: 'node'</code></td><td><span class="check">✓</span> Always</td></tr>
+              <tr><td><code>testEnvironment: 'jsdom'</code></td><td><span class="cross">✗</span> Not yet</td></tr>
+              <tr><td><code>transform</code>, <code>babel.config.js</code></td><td><span class="cross">✗</span> Files are loaded by Node.js, which runs TypeScript and modern JavaScript without them</td></tr>
+              <tr><td><code>moduleNameMapper</code></td><td><span class="cross">✗</span> Not yet: use <code>imports</code> of <code>package.json</code> (<code>#src/*</code>), which Node.js resolves</td></tr>
+              <tr><td><code>globalSetup</code>, <code>globalTeardown</code></td><td><span class="cross">✗</span> Not yet: use <code>beforeAll</code> in a setup file</td></tr>
+              <tr><td><code>snapshotSerializers</code></td><td><span class="cross">✗</span> Call <code>expect.addSnapshotSerializer</code> in a setup file</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="jest-differences">Differences with Jest</h3>
+        <ul>
+          <li>
+            <strong>Worker threads, not processes.</strong> Jest runs tests in child processes. vynta uses threads, which
+            start faster; <code>process.send</code> exists in them (and sends nothing), as code under test sometimes calls
+            it. For code that needs a whole process (<code>process.chdir</code>, native addons that are not thread safe),
+            use <code>--pool forks</code>.
+          </li>
+          <li>
+            <strong>Dependencies are shared by the files of a worker.</strong> Every test file gets fresh copies of your
+            own modules, as in Jest, but the modules of <code>node_modules</code> are loaded once per worker. A test that
+            changes the state of a dependency (a global setting of a library) should undo it.
+          </li>
+          <li>
+            <strong>No Babel.</strong> Syntax only Babel understands (Flow, JSX, decorators, TypeScript <code>enum</code>)
+            does not run.
+          </li>
+          <li>
+            <strong>Mock factories are not checked.</strong> Jest refuses factories that use variables whose names do not
+            start with <code>mock</code>; vynta does not check them, and hoists the calls the same way.
+          </li>
+        </ul>
+
+        <h2 id="vitest">From Vitest</h2>
+        <p>Your test files run as they are, imports from <code>vitest</code> included:</p>
+        <pre><code class="language-js">import { describe, expect, it, vi } from 'vitest'; // resolved to vynta</code></pre>
+        <ul>
+          <li><code>vi.fn</code>, <code>vi.spyOn</code>, <code>vi.mock</code> with <code>importOriginal</code>, <code>vi.hoisted</code>, <code>vi.doMock</code>, <code>vi.importActual</code>, fake timers, <code>vi.stubGlobal</code>, <code>vi.stubEnv</code>, <code>vi.waitFor</code>.</li>
+          <li><code>test.extend</code> fixtures, <code>test.for</code>, <code>test.concurrent</code>, <code>test.fails</code>, <code>skipIf</code> and <code>runIf</code>, the test context.</li>
+          <li><code>expect.soft</code>, <code>expect.poll</code>, <code>toBeTypeOf</code>, <code>toBeOneOf</code>, <code>toSatisfy</code>, <code>toHaveBeenCalledOnce</code>...</li>
+          <li>Your <code>.snap</code> files, read and written in Vitest's format (<code>describe &gt; test 1</code> names).</li>
+        </ul>
+
+        <h3 id="vitest-config">Vitest options</h3>
+        <p>
+          vynta does not read <code>vitest.config.ts</code>, as that needs Vite. Move the test options to
+          <code>vynta.config.js</code>; most have the same name:
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Vitest (<code>test.*</code>)</th><th>vynta</th></tr></thead>
+            <tbody>
+              <tr><td><code>include</code>, <code>exclude</code>, <code>setupFiles</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td><code>testTimeout</code>, <code>hookTimeout</code>, <code>retry</code>, <code>maxConcurrency</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td><code>pool</code>, <code>isolate</code>, <code>maxWorkers</code></td><td><span class="check">✓</span> <code>'threads'</code>, <code>'forks'</code> or <code>'inline'</code></td></tr>
+              <tr><td><code>clearMocks</code>, <code>mockReset</code>, <code>restoreMocks</code></td><td><span class="check">✓</span> <code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td></tr>
+              <tr><td><code>unstubGlobals</code>, <code>unstubEnvs</code></td><td><span class="check">✓</span> Always, when a file ends</td></tr>
+              <tr><td><code>globals</code></td><td><span class="check">✓</span> Always on; imports work as well</td></tr>
+              <tr><td><code>coverage.include</code>, <code>coverage.thresholds</code></td><td><span class="check">✓</span> <code>collectCoverageFrom</code>, <code>coverageThreshold</code></td></tr>
+              <tr><td><code>environment: 'jsdom'</code>, <code>'happy-dom'</code></td><td><span class="cross">✗</span> Not yet</td></tr>
+              <tr><td>Vite plugins, <code>resolve.alias</code></td><td><span class="cross">✗</span> No Vite: use <code>imports</code> of <code>package.json</code></td></tr>
+              <tr><td>Browser mode, <code>typecheck</code>, <code>bench</code>, in-source tests</td><td><span class="cross">✗</span> Not supported</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="vitest-differences">Differences with Vitest</h3>
+        <ul>
+          <li>
+            <strong>The order of <code>afterEach</code> hooks.</strong> vynta follows Jest: the hooks of a suite run in the
+            order they were declared. Vitest runs them in reverse by default.
+          </li>
+          <li>
+            <strong>Globals are always there.</strong> A test that checks that <code>describe</code> is not a global
+            would notice; nothing else does.
+          </li>
+          <li>
+            <strong>No transform.</strong> What Vite compiles for you (JSX, TypeScript-only syntax, <code>import.meta.env</code>)
+            is not compiled: vynta runs what Node.js runs.
+          </li>
+        </ul>
+
+        <h2 id="missing">Not supported yet</h2>
+        <p>
+          Watch mode, <code>jsdom</code> and <code>happy-dom</code> environments, JSX, <code>moduleNameMapper</code> and
+          aliases, <code>globalSetup</code>, type checking, sharding, and the coverage of files no test loads. If your
+          suite needs one of them, keep your current runner for now, or run the tests that need it with it.
+        </p>
+      </article>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>
+          <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vynta">npm</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

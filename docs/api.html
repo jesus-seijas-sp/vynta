@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API reference · vynta</title>
+    <meta name="description" content="Every global, matcher, vi function, mock method, CLI flag and configuration option of vynta." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css?v=0.1.0" />
+    <script src="main.js?v=0.1.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <nav class="nav">
+          <a href="guide.html">Guide</a>
+          <a href="api.html" aria-current="page">API</a>
+          <a class="hide-small" href="benchmarks.html">Benchmarks</a>
+          <a class="hide-small" href="migrating.html">Migrating</a>
+          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="docs">
+      <button class="menu-toggle" type="button" aria-expanded="false">☰ Contents</button>
+      <aside class="sidebar">
+        <h4>Tests</h4>
+        <ul>
+          <li><a href="#test">test and it</a></li>
+          <li><a href="#describe">describe</a></li>
+          <li><a href="#hooks">Hooks</a></li>
+          <li><a href="#context">Test context</a></li>
+        </ul>
+        <h4>expect</h4>
+        <ul>
+          <li><a href="#matchers">Matchers</a></li>
+          <li><a href="#mock-matchers">Mock matchers</a></li>
+          <li><a href="#snapshot-matchers">Snapshot matchers</a></li>
+          <li><a href="#asymmetric">Asymmetric matchers</a></li>
+          <li><a href="#expect-helpers">expect helpers</a></li>
+        </ul>
+        <h4>vi / jest</h4>
+        <ul>
+          <li><a href="#vi-mocks">Mocks and spies</a></li>
+          <li><a href="#mock-methods">Mock function methods</a></li>
+          <li><a href="#vi-modules">Module mocks</a></li>
+          <li><a href="#vi-timers">Fake timers</a></li>
+          <li><a href="#vi-other">Stubs and waiting</a></li>
+        </ul>
+        <h4>Running</h4>
+        <ul>
+          <li><a href="#cli">Command line</a></li>
+          <li><a href="#config">Configuration</a></li>
+        </ul>
+      </aside>
+
+      <article class="content">
+        <h1>API reference</h1>
+        <p class="intro">
+          Everything vynta provides. The functions of tests are globals, and can be imported from <code>vynta</code> (or
+          from <code>vitest</code> and <code>@jest/globals</code>, which resolve to it). <code>jest</code> and
+          <code>vi</code> are the same object.
+        </p>
+
+        <h2 id="test">test and it</h2>
+        <p><code>test(name, fn, timeout?)</code> declares a test; <code>it</code> is the same function. <code>fn</code> may return a promise, or take Jest's <code>done</code> callback. The options can be an object: <code>test(name, { timeout, retry, repeats }, fn)</code>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Form</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>test.skip</code></td><td>Declares the test without running it</td></tr>
+              <tr><td><code>test.only</code></td><td>Runs only the <code>.only</code> tests and suites of the file</td></tr>
+              <tr><td><code>test.todo(name)</code></td><td>A test still to write</td></tr>
+              <tr><td><code>test.fails</code> / <code>test.failing</code></td><td>Passes when the test fails, and fails when it passes</td></tr>
+              <tr><td><code>test.concurrent</code></td><td>Runs at the same time as the other concurrent tests of its suite</td></tr>
+              <tr><td><code>test.sequential</code></td><td>Runs alone, in a concurrent suite</td></tr>
+              <tr><td><code>test.skipIf(condition)</code></td><td>Skips the test when <code>condition</code> is truthy</td></tr>
+              <tr><td><code>test.runIf(condition)</code></td><td>Runs the test only when <code>condition</code> is truthy</td></tr>
+              <tr><td><code>test.each(table)(name, fn)</code></td><td>A test per case: arrays are spread as arguments, objects given as they are, tagged templates as objects</td></tr>
+              <tr><td><code>test.for(table)(name, fn)</code></td><td>A test per case, the case given as it is and the context second</td></tr>
+              <tr><td><code>test.extend(fixtures)</code></td><td>A <code>test</code> with fixtures (see <a href="guide.html#context">the guide</a>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Modifiers chain: <code>test.skip.each</code>, <code>test.only.concurrent</code>... Titles of <code>.each</code> take <code>%s %d %i %f %j %o %O %p</code>, <code>%#</code> (index), <code>%$</code> (index + 1), <code>%%</code>, and <code>$key.path</code> for object cases.</p>
+
+        <h2 id="describe">describe</h2>
+        <p><code>describe(name, fn, options?)</code> groups tests (<code>suite</code> is the same function). It has the modifiers of <code>test</code>: <code>skip</code>, <code>only</code>, <code>todo</code>, <code>concurrent</code>, <code>sequential</code>, <code>skipIf</code>, <code>runIf</code>, <code>each</code> and <code>for</code>. Its function may be async.</p>
+
+        <h2 id="hooks">Hooks</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Hook</th><th>Runs</th></tr></thead>
+            <tbody>
+              <tr><td><code>beforeAll(fn, timeout?)</code></td><td>Once, before the tests of its suite. When it fails, those tests fail</td></tr>
+              <tr><td><code>afterAll(fn, timeout?)</code></td><td>Once, after the tests of its suite</td></tr>
+              <tr><td><code>beforeEach(fn, timeout?)</code></td><td>Before every test of its suite, outer suites first. A function it returns runs after the test</td></tr>
+              <tr><td><code>afterEach(fn, timeout?)</code></td><td>After every test of its suite, inner suites first</td></tr>
+              <tr><td><code>onTestFinished(fn)</code></td><td>Called in a test: after it, whatever its result</td></tr>
+              <tr><td><code>onTestFailed(fn)</code></td><td>Called in a test: after it, when it failed</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="context">Test context</h2>
+        <p>The first parameter of a test function, when it is destructured or named <code>context</code>, <code>ctx</code> or <code>task</code>. Any other parameter is Jest's <code>done</code> callback.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Property</th><th>What it is</th></tr></thead>
+            <tbody>
+              <tr><td><code>task</code></td><td><code>{ name, fullName, mode, file, suite, meta }</code></td></tr>
+              <tr><td><code>expect</code></td><td>An <code>expect</code> for this test, for concurrent tests</td></tr>
+              <tr><td><code>skip(note?)</code>, <code>skip(condition, note?)</code></td><td>Stops the test and marks it as skipped</td></tr>
+              <tr><td><code>signal</code></td><td>An <code>AbortSignal</code> aborted when the test ends</td></tr>
+              <tr><td><code>onTestFinished(fn)</code>, <code>onTestFailed(fn)</code></td><td>As the globals</td></tr>
+              <tr><td>fixtures</td><td>The values of the fixtures of <code>test.extend</code> the test destructures</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="matchers">Matchers</h2>
+        <p><code>expect(value, message?)</code> returns the matchers. <code>message</code> is shown before the failure. <code>.not</code> negates a matcher; <code>.resolves</code> and <code>.rejects</code> apply it to the value a promise (or a function returning one) settles to, and return a promise.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Matcher</th><th>Passes when the value</th></tr></thead>
+            <tbody>
+              <tr><td><code>toBe(expected)</code></td><td>is <code>expected</code> (<code>Object.is</code>)</td></tr>
+              <tr><td><code>toEqual(expected)</code></td><td>is deeply equal, ignoring <code>undefined</code> properties and classes</td></tr>
+              <tr><td><code>toStrictEqual(expected)</code></td><td>is deeply equal, including <code>undefined</code> properties, array holes and classes</td></tr>
+              <tr><td><code>toMatchObject(object)</code></td><td>has every property of <code>object</code>, recursively</td></tr>
+              <tr><td><code>toBeDefined()</code>, <code>toBeUndefined()</code></td><td>is not / is <code>undefined</code></td></tr>
+              <tr><td><code>toBeNull()</code>, <code>toBeNaN()</code></td><td>is <code>null</code> / <code>NaN</code></td></tr>
+              <tr><td><code>toBeTruthy()</code>, <code>toBeFalsy()</code></td><td>is truthy / falsy</td></tr>
+              <tr><td><code>toBeGreaterThan(n)</code>, <code>toBeGreaterThanOrEqual(n)</code></td><td>is <code>&gt;</code> / <code>&gt;=</code> <code>n</code> (numbers or bigints)</td></tr>
+              <tr><td><code>toBeLessThan(n)</code>, <code>toBeLessThanOrEqual(n)</code></td><td>is <code>&lt;</code> / <code>&lt;=</code> <code>n</code></td></tr>
+              <tr><td><code>toBeCloseTo(n, digits = 2)</code></td><td>differs from <code>n</code> by less than <code>10<sup>-digits</sup> / 2</code></td></tr>
+              <tr><td><code>toBeInstanceOf(Class)</code></td><td>is an instance of <code>Class</code></td></tr>
+              <tr><td><code>toBeTypeOf(type)</code></td><td>has that <code>typeof</code></td></tr>
+              <tr><td><code>toBeOneOf(values)</code></td><td>equals one of <code>values</code></td></tr>
+              <tr><td><code>toSatisfy(predicate)</code></td><td>makes <code>predicate</code> return true</td></tr>
+              <tr><td><code>toContain(item)</code></td><td>(array, string or iterable) contains <code>item</code></td></tr>
+              <tr><td><code>toContainEqual(item)</code></td><td>contains an element equal to <code>item</code></td></tr>
+              <tr><td><code>toHaveLength(n)</code></td><td>has <code>length</code> <code>n</code></td></tr>
+              <tr><td><code>toHaveProperty(path, value?)</code></td><td>has the property at <code>path</code> (<code>'a.b[0].c'</code> or an array), with that value</td></tr>
+              <tr><td><code>toMatch(pattern)</code></td><td>(a string) contains <code>pattern</code>, or matches it when it is a regular expression</td></tr>
+              <tr><td><code>toThrow(expected?)</code> / <code>toThrowError</code></td><td>(a function) throws: an error whose message contains a string, matches a regular expression, of a class, or with the message of an error. With <code>.rejects</code>, the rejection</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="mock-matchers">Mock matchers</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Matcher</th><th>Passes when the mock</th></tr></thead>
+            <tbody>
+              <tr><td><code>toHaveBeenCalled()</code></td><td>was called</td></tr>
+              <tr><td><code>toHaveBeenCalledTimes(n)</code></td><td>was called <code>n</code> times</td></tr>
+              <tr><td><code>toHaveBeenCalledOnce()</code></td><td>was called once</td></tr>
+              <tr><td><code>toHaveBeenCalledWith(...args)</code></td><td>was called at least once with these arguments</td></tr>
+              <tr><td><code>toHaveBeenCalledExactlyOnceWith(...args)</code></td><td>was called once, with these arguments</td></tr>
+              <tr><td><code>toHaveBeenLastCalledWith(...args)</code></td><td>was last called with these arguments</td></tr>
+              <tr><td><code>toHaveBeenNthCalledWith(n, ...args)</code></td><td>was called with these arguments the <code>n</code>th time</td></tr>
+              <tr><td><code>toHaveReturned()</code>, <code>toHaveReturnedTimes(n)</code></td><td>returned (without throwing), <code>n</code> times</td></tr>
+              <tr><td><code>toHaveReturnedWith(value)</code></td><td>returned <code>value</code> at least once</td></tr>
+              <tr><td><code>toHaveLastReturnedWith(value)</code>, <code>toHaveNthReturnedWith(n, value)</code></td><td>returned <code>value</code> the last / <code>n</code>th time</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Jest's older names work too: <code>toBeCalled</code>, <code>toBeCalledTimes</code>, <code>toBeCalledWith</code>, <code>lastCalledWith</code>, <code>nthCalledWith</code>, <code>toReturn</code>, <code>toReturnTimes</code>, <code>toReturnWith</code>, <code>lastReturnedWith</code>, <code>nthReturnedWith</code>.</p>
+
+        <h2 id="snapshot-matchers">Snapshot matchers</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Matcher</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>toMatchSnapshot(properties?, hint?)</code></td><td>Compares with the snapshot in <code>__snapshots__/&lt;file&gt;.snap</code>, writing it the first time. <code>properties</code> are matchers for the values that change on every run</td></tr>
+              <tr><td><code>toMatchInlineSnapshot(properties?, snapshot?)</code></td><td>The same, with the snapshot written into the test</td></tr>
+              <tr><td><code>toThrowErrorMatchingSnapshot(hint?)</code></td><td>Compares the message of the error thrown with a snapshot</td></tr>
+              <tr><td><code>toThrowErrorMatchingInlineSnapshot(snapshot?)</code></td><td>The same, inline</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="asymmetric">Asymmetric matchers</h2>
+        <p>Used in expected values: they match any value that passes their check. The ones with <code>expect.not.</code> match the values that do not.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Matcher</th><th>Matches</th></tr></thead>
+            <tbody>
+              <tr><td><code>expect.anything()</code></td><td>anything but <code>null</code> and <code>undefined</code></td></tr>
+              <tr><td><code>expect.any(Class)</code></td><td>instances of <code>Class</code>, or primitives of that type (<code>String</code>, <code>Number</code>...)</td></tr>
+              <tr><td><code>expect.objectContaining(object)</code></td><td>objects with these properties</td></tr>
+              <tr><td><code>expect.arrayContaining(array)</code></td><td>arrays with these elements, in any order</td></tr>
+              <tr><td><code>expect.stringContaining(string)</code></td><td>strings containing <code>string</code></td></tr>
+              <tr><td><code>expect.stringMatching(regexp)</code></td><td>strings matching <code>regexp</code></td></tr>
+              <tr><td><code>expect.closeTo(n, digits?)</code></td><td>numbers close to <code>n</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="expect-helpers">expect helpers</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>expect.soft(value)</code></td><td>Matchers that record the failure and let the test go on</td></tr>
+              <tr><td><code>expect.poll(fn, { timeout, interval })</code></td><td>Matchers that retry on <code>fn()</code> until they pass (1 s, every 50 ms by default)</td></tr>
+              <tr><td><code>expect.assertions(n)</code></td><td>Fails the test unless <code>n</code> assertions ran</td></tr>
+              <tr><td><code>expect.hasAssertions()</code></td><td>Fails the test unless an assertion ran</td></tr>
+              <tr><td><code>expect.extend(matchers)</code></td><td>Adds matchers, and their asymmetric forms <code>expect.name()</code>, <code>expect.not.name()</code></td></tr>
+              <tr><td><code>expect.addEqualityTesters(testers)</code></td><td>Adds equality rules for your types</td></tr>
+              <tr><td><code>expect.addSnapshotSerializer(serializer)</code></td><td>Adds a pretty-format plugin for snapshots</td></tr>
+              <tr><td><code>expect.getState()</code></td><td>The assertion count and the name and path of the current test</td></tr>
+              <tr><td><code>expect.unreachable(message?)</code></td><td>Fails: for code that should not run</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="vi-mocks">Mocks and spies</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>vi.fn(implementation?)</code></td><td>A mock function</td></tr>
+              <tr><td><code>vi.spyOn(object, method, accessType?)</code></td><td>Replaces a method (or a <code>'get'</code> / <code>'set'</code> accessor) with a mock that calls the original</td></tr>
+              <tr><td><code>vi.isMockFunction(value)</code></td><td>Whether a value is a mock</td></tr>
+              <tr><td><code>vi.mocked(value)</code></td><td>Returns the value (for TypeScript)</td></tr>
+              <tr><td><code>vi.clearAllMocks()</code></td><td>Forgets the calls of every mock</td></tr>
+              <tr><td><code>vi.resetAllMocks()</code></td><td>Also puts back their first implementation</td></tr>
+              <tr><td><code>vi.restoreAllMocks()</code></td><td>Puts back what the spies replaced</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="mock-methods">Mock function methods</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Method or property</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>mock.calls</code>, <code>mock.results</code>, <code>mock.instances</code>, <code>mock.contexts</code>, <code>mock.lastCall</code>, <code>mock.settledResults</code>, <code>mock.invocationCallOrder</code></td><td>What the mock recorded</td></tr>
+              <tr><td><code>mockImplementation(fn)</code>, <code>mockImplementationOnce(fn)</code></td><td>What it does, always / on the next call</td></tr>
+              <tr><td><code>mockReturnValue(v)</code>, <code>mockReturnValueOnce(v)</code></td><td>What it returns</td></tr>
+              <tr><td><code>mockResolvedValue(v)</code>, <code>mockResolvedValueOnce(v)</code></td><td>A promise that resolves to <code>v</code></td></tr>
+              <tr><td><code>mockRejectedValue(e)</code>, <code>mockRejectedValueOnce(e)</code></td><td>A promise that rejects with <code>e</code></td></tr>
+              <tr><td><code>mockReturnThis()</code></td><td>Returns <code>this</code></td></tr>
+              <tr><td><code>withImplementation(fn, callback)</code></td><td>Uses <code>fn</code> while <code>callback</code> runs</td></tr>
+              <tr><td><code>mockClear()</code>, <code>mockReset()</code>, <code>mockRestore()</code></td><td>As <code>vi.clearAllMocks</code>... for this mock</td></tr>
+              <tr><td><code>mockName(name)</code>, <code>getMockName()</code>, <code>getMockImplementation()</code></td><td>Its name, and its implementation</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="vi-modules">Module mocks</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>vi.mock(path, factory?)</code></td><td>Replaces a module for the file; moved to the top of the file. Without a factory: <code>__mocks__</code>, or automock. <code>vi.mock(path, { spy: true })</code> automocks with spies that call the originals</td></tr>
+              <tr><td><code>jest.mock(path, factory?, { virtual })</code></td><td>The same; <code>virtual</code> for modules that do not exist</td></tr>
+              <tr><td><code>vi.doMock(path, factory?)</code></td><td>As <code>vi.mock</code>, from where it is called</td></tr>
+              <tr><td><code>vi.unmock(path)</code>, <code>vi.doUnmock(path)</code></td><td>The real module again</td></tr>
+              <tr><td><code>vi.hoisted(fn)</code></td><td>Runs <code>fn</code> before the mocks, for values their factories use</td></tr>
+              <tr><td><code>vi.importActual(path)</code>, <code>jest.requireActual(path)</code></td><td>The real module</td></tr>
+              <tr><td><code>vi.importMock(path)</code>, <code>jest.requireMock(path)</code></td><td>The mocked module</td></tr>
+              <tr><td><code>vi.resetModules()</code></td><td>Loads the project modules again on their next import</td></tr>
+              <tr><td><code>jest.isolateModules(fn)</code></td><td>The modules <code>fn</code> loads are its own</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="vi-timers">Fake timers</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>vi.useFakeTimers({ now, toFake, doNotFake, loopLimit })</code></td><td>Fakes <code>setTimeout</code>, <code>setInterval</code>, <code>setImmediate</code> (and their clear functions), <code>Date</code> and <code>performance.now</code>. <code>queueMicrotask</code> and <code>nextTick</code> when listed in <code>toFake</code></td></tr>
+              <tr><td><code>vi.useRealTimers()</code></td><td>The real ones again (also when the file ends)</td></tr>
+              <tr><td><code>vi.advanceTimersByTime(ms)</code>, <code>vi.advanceTimersByTimeAsync(ms)</code></td><td>Moves the clock, running the timers due</td></tr>
+              <tr><td><code>vi.advanceTimersToNextTimer(steps?)</code> (and <code>Async</code>)</td><td>Runs the next timers</td></tr>
+              <tr><td><code>vi.runAllTimers()</code> (and <code>Async</code>)</td><td>Runs every timer, and the ones they add</td></tr>
+              <tr><td><code>vi.runOnlyPendingTimers()</code> (and <code>Async</code>)</td><td>Runs the timers pending now</td></tr>
+              <tr><td><code>vi.setSystemTime(date)</code>, <code>vi.getMockedSystemTime()</code>, <code>vi.getRealSystemTime()</code></td><td>The time of the fake clock, and the real one</td></tr>
+              <tr><td><code>vi.getTimerCount()</code>, <code>vi.clearAllTimers()</code>, <code>vi.isFakeTimers()</code></td><td>The pending timers</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="vi-other">Stubs and waiting</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>vi.stubGlobal(name, value)</code>, <code>vi.unstubAllGlobals()</code></td><td>Replaces a global, until the file ends</td></tr>
+              <tr><td><code>vi.stubEnv(name, value)</code>, <code>vi.unstubAllEnvs()</code></td><td>Replaces an environment variable, until the file ends</td></tr>
+              <tr><td><code>vi.waitFor(fn, { timeout, interval })</code></td><td>Retries <code>fn</code> until it does not throw</td></tr>
+              <tr><td><code>vi.waitUntil(fn, { timeout, interval })</code></td><td>Retries <code>fn</code> until it returns something truthy</td></tr>
+              <tr><td><code>vi.setConfig({ testTimeout })</code>, <code>jest.setTimeout(ms)</code></td><td>The timeout of the next tests</td></tr>
+              <tr><td><code>jest.retryTimes(n)</code></td><td>Retries failing tests <code>n</code> times</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="cli">Command line</h2>
+        <pre><code class="language-bash">vynta [options] [path patterns...]</code></pre>
+        <p>Path patterns are regular expressions matched against the path of every test file. The names of Jest and Vitest flags are accepted.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Flag</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>-t, --testNamePattern &lt;regex&gt;</code></td><td>Runs only the tests whose full name matches</td></tr>
+              <tr><td><code>-c, --config &lt;file&gt;</code></td><td>The configuration file</td></tr>
+              <tr><td><code>-r, --root &lt;dir&gt;</code></td><td>The project root (the current directory by default)</td></tr>
+              <tr><td><code>-w, --maxWorkers &lt;n|n%&gt;</code></td><td>Workers; by default, from the durations of the last run</td></tr>
+              <tr><td><code>-i, --runInBand</code></td><td>Everything in the main thread</td></tr>
+              <tr><td><code>--pool &lt;threads|forks|inline&gt;</code></td><td>Worker threads (default), child processes, or the main thread</td></tr>
+              <tr><td><code>--no-isolate</code></td><td>Shares project modules between the files of a worker</td></tr>
+              <tr><td><code>--testTimeout &lt;ms&gt;</code></td><td>The timeout of tests (5000)</td></tr>
+              <tr><td><code>--reporter &lt;default|verbose|json&gt;</code></td><td>What is printed; <code>--verbose</code> for every test</td></tr>
+              <tr><td><code>--retry &lt;n&gt;</code></td><td>Retries failing tests</td></tr>
+              <tr><td><code>--bail &lt;n&gt;</code></td><td>Stops after <code>n</code> failed files</td></tr>
+              <tr><td><code>--silent</code></td><td>Hides what the tests write to the console</td></tr>
+              <tr><td><code>--passWithNoTests</code></td><td>Succeeds when there are no test files</td></tr>
+              <tr><td><code>-u, --update</code></td><td>Writes the snapshots that changed</td></tr>
+              <tr><td><code>--ci</code></td><td>Does not write new snapshots</td></tr>
+              <tr><td><code>--coverage</code></td><td>Reports the coverage of the project</td></tr>
+              <tr><td><code>--splitFiles</code></td><td>Runs long files in parts on several workers (see <code>splitFiles</code>)</td></tr>
+              <tr><td><code>--allowOnly</code></td><td>Accepts <code>.only</code> (on by default)</td></tr>
+              <tr><td><code>--no-color</code></td><td>Plain output (also with <code>NO_COLOR</code>)</td></tr>
+              <tr><td><code>-h, --help</code>, <code>-v, --version</code></td><td>Help, version</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="config">Configuration</h2>
+        <p>In <code>vynta.config.js</code>, <code>"vynta"</code> in <code>package.json</code>, or your Jest configuration (see <a href="guide.html#configuration">the guide</a>).</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>include</code></td><td><code>*.{test,spec}.*</code>, <code>__tests__</code></td><td>Globs of the test files</td></tr>
+              <tr><td><code>exclude</code></td><td><code>node_modules</code>, <code>.git</code>, <code>dist</code>, <code>coverage</code></td><td>Globs of the folders and files left out</td></tr>
+              <tr><td><code>excludePatterns</code></td><td><code>[]</code></td><td>Regular expressions of paths left out (Jest's <code>testPathIgnorePatterns</code>)</td></tr>
+              <tr><td><code>roots</code></td><td><code>['.']</code></td><td>Folders to look for tests in</td></tr>
+              <tr><td><code>setupFiles</code></td><td><code>[]</code></td><td>Files loaded before every test file</td></tr>
+              <tr><td><code>testTimeout</code></td><td><code>5000</code></td><td>Timeout of tests, in ms</td></tr>
+              <tr><td><code>hookTimeout</code></td><td><code>testTimeout</code></td><td>Timeout of hooks</td></tr>
+              <tr><td><code>retry</code></td><td><code>0</code></td><td>Retries of failing tests</td></tr>
+              <tr><td><code>maxConcurrency</code></td><td><code>5</code></td><td>Concurrent tests running at once</td></tr>
+              <tr><td><code>pool</code></td><td><code>'threads'</code></td><td><code>'threads'</code>, <code>'forks'</code> or <code>'inline'</code></td></tr>
+              <tr><td><code>maxWorkers</code></td><td>from the last run</td><td>Number of workers, or <code>'50%'</code></td></tr>
+              <tr><td><code>isolate</code></td><td><code>true</code></td><td>Fresh project modules for every file</td></tr>
+              <tr><td><code>splitFiles</code></td><td><code>false</code></td><td><code>true</code> or globs: files whose tests do not depend on each other, which vynta may run in parts on several workers when they are the long ones</td></tr>
+              <tr><td><code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td><td><code>false</code></td><td>Clears, resets or restores every mock before each test</td></tr>
+              <tr><td><code>allowOnly</code></td><td><code>true</code></td><td>Fails files with <code>.only</code> when false</td></tr>
+              <tr><td><code>passWithNoTests</code></td><td><code>false</code></td><td>Succeeds with no test files</td></tr>
+              <tr><td><code>bail</code></td><td><code>0</code></td><td>Stops after that many failed files</td></tr>
+              <tr><td><code>silent</code></td><td><code>false</code></td><td>Hides console output</td></tr>
+              <tr><td><code>reporter</code></td><td><code>'default'</code></td><td><code>'default'</code>, <code>'verbose'</code> or <code>'json'</code></td></tr>
+              <tr><td><code>coverage</code></td><td><code>false</code></td><td>Collects coverage (Jest's <code>collectCoverage</code>)</td></tr>
+              <tr><td><code>collectCoverageFrom</code></td><td>every loaded file</td><td>Globs of the files to report, <code>!</code> to leave out</td></tr>
+              <tr><td><code>coverageDirectory</code></td><td><code>'coverage'</code></td><td>Where <code>lcov.info</code> goes</td></tr>
+              <tr><td><code>coverageReporters</code></td><td><code>['text', 'lcov']</code></td><td>Reports to make</td></tr>
+              <tr><td><code>coverageThreshold</code></td><td>none</td><td><code>{ global: { lines, functions, branches, statements } }</code>: minimum percentages, or maximum uncovered counts when negative</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>
+          <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vynta">npm</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guide · vynta</title>
+    <meta name="description" content="How to run and write tests with vynta: tests, assertions, mocks, module mocks, fake timers, snapshots, coverage and configuration." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b45d6'/%3E%3Ctext x='16' y='22.5' font-family='monospace' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Ev%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css?v=0.1.0" />
+    <script src="main.js?v=0.1.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <a class="logo" href="./"><span class="logo-mark">v</span>vynta</a>
+        <nav class="nav">
+          <a href="guide.html" aria-current="page">Guide</a>
+          <a href="api.html">API</a>
+          <a class="hide-small" href="benchmarks.html">Benchmarks</a>
+          <a class="hide-small" href="migrating.html">Migrating</a>
+          <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a>
+          <button class="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="docs">
+      <button class="menu-toggle" type="button" aria-expanded="false">☰ Contents</button>
+      <aside class="sidebar">
+        <h4>Start</h4>
+        <ul>
+          <li><a href="#getting-started">Getting started</a></li>
+          <li><a href="#running">Running tests</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+        </ul>
+        <h4>Writing tests</h4>
+        <ul>
+          <li><a href="#tests">Tests and suites</a></li>
+          <li><a href="#hooks">Hooks</a></li>
+          <li><a href="#async">Async tests</a></li>
+          <li><a href="#context">Context and fixtures</a></li>
+          <li><a href="#assertions">Assertions</a></li>
+          <li><a href="#mocks">Mock functions</a></li>
+          <li><a href="#module-mocks">Module mocks</a></li>
+          <li><a href="#timers">Fake timers</a></li>
+          <li><a href="#snapshots">Snapshots</a></li>
+        </ul>
+        <h4>More</h4>
+        <ul>
+          <li><a href="#coverage">Coverage</a></li>
+          <li><a href="#isolation">Workers and isolation</a></li>
+          <li><a href="#split-files">Splitting long files</a></li>
+          <li><a href="#typescript">TypeScript and ES modules</a></li>
+          <li><a href="#speed">Why it is fast</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="api.html">API reference</a></li>
+          <li><a href="migrating.html">Migrating</a></li>
+        </ul>
+      </aside>
+
+      <article class="content">
+        <h1>Guide</h1>
+        <p class="intro">
+          vynta is a test runner for Node.js with the API of Jest and Vitest. It runs the tests written for either of
+          them without changes, and it is built to be fast: it loads your files with Node.js itself, keeps its workers
+          warm between files and runs the slowest files first.
+        </p>
+
+        <h2 id="getting-started">Getting started</h2>
+        <p>Install it as a development dependency. It needs Node.js 22 or later, and nothing else.</p>
+        <pre><code class="language-bash">npm install --save-dev vynta</code></pre>
+        <p>Write a test in any file whose name ends in <code>.test.js</code> or <code>.spec.js</code> (or <code>.ts</code>, <code>.mjs</code>, <code>.cjs</code>...):</p>
+        <pre><code class="language-js">// sum.test.js
+const { sum } = require('./sum');
+
+describe('sum', () => {
+  it('adds two numbers', () => {
+    expect(sum(1, 2)).toBe(3);
+  });
+});</code></pre>
+        <p>And run it:</p>
+        <pre><code class="language-bash">npx vynta</code></pre>
+        <div class="terminal">
+          <div class="terminal-bar"><span></span><span></span><span></span></div>
+          <pre><code class="nohighlight"> <span class="t-accent">VYNTA</span> <span class="t-dim">running 1 test files on inline</span>
+
+ <span class="t-ok">✓</span> sum.test.js <span class="t-dim">(1 tests)</span> <span class="t-dim">2ms</span>
+
+<span class="t-dim"> Test Files</span>  <span class="t-ok t-bold">1 passed</span> <span class="t-dim">(1)</span>
+<span class="t-dim">      Tests</span>  <span class="t-ok t-bold">1 passed</span> <span class="t-dim">(1)</span>
+<span class="t-dim">   Duration</span>  31ms</code></pre>
+        </div>
+        <p>
+          <code>describe</code>, <code>it</code>, <code>test</code>, <code>expect</code>, the hooks, <code>vi</code> and
+          <code>jest</code> are globals. If you prefer imports, take them from <code>vynta</code>, or leave the ones from
+          <code>vitest</code> or <code>@jest/globals</code> you already have: they resolve to vynta.
+        </p>
+        <pre><code class="language-js">import { describe, expect, it, vi } from 'vynta';</code></pre>
+        <p>Finally, point your <code>test</code> script at it:</p>
+        <pre><code class="language-json">{
+  "scripts": {
+    "test": "vynta"
+  }
+}</code></pre>
+
+        <h2 id="running">Running tests</h2>
+        <p>
+          With no arguments, vynta runs every test file of the project. Arguments filter the files by their path, as in
+          Jest; <code>-t</code> filters the tests by their full name (the names of their <code>describe</code> blocks and
+          their own).
+        </p>
+        <pre><code class="language-bash">npx vynta                      # every test file
+npx vynta src/users            # the files whose path matches src/users
+npx vynta -t "saves the user"  # the tests whose name matches
+npx vynta --coverage           # with a coverage report
+npx vynta -u                   # update the snapshots that changed</code></pre>
+        <p>A test file is any <code>*.test.*</code> or <code>*.spec.*</code> file, or any file in a <code>__tests__</code> folder, out of <code>node_modules</code>, <code>dist</code> and <code>coverage</code>.</p>
+
+        <h3 id="output">What it prints</h3>
+        <p>
+          A line per file as it finishes, then every failure with its diff, the line of your test where it happened, and
+          a summary. The output of <code>console.log</code> in a test is shown with the test that wrote it;
+          <code>--silent</code> hides it.
+        </p>
+        <div class="terminal">
+          <div class="terminal-bar"><span></span><span></span><span></span></div>
+          <pre><code class="nohighlight"> <span class="t-fail t-bold">FAIL</span> users.test.js &gt; users &gt; saves the profile
+<span class="t-fail t-bold">AssertionError:</span> expect(received).toEqual(expected)
+
+<span class="t-ok">- Expected  - 1</span>
+<span class="t-fail">+ Received  + 1</span>
+
+<span class="t-dim">  {</span>
+<span class="t-dim">    "name": "Ann",</span>
+<span class="t-ok">-   "role": "admin",</span>
+<span class="t-fail">+   "role": "user",</span>
+<span class="t-dim">  }</span>
+
+<span class="t-fail">&gt;</span> <span class="t-dim">12 |</span>     expect(saved).toEqual({ name: 'Ann', role: 'admin' });
+     <span class="t-dim">|</span>                   <span class="t-fail">^</span>
+
+<span class="t-dim"> ❯ users.test.js:12:19</span></code></pre>
+        </div>
+        <p>
+          <code>--verbose</code> lists every test; <code>--reporter json</code> prints the whole run as one JSON document,
+          for tools.
+        </p>
+
+        <h3 id="flags">Common flags</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Flag</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>-t, --testNamePattern</code></td><td>Run only the tests whose full name matches this regular expression</td></tr>
+              <tr><td><code>-u, --update</code></td><td>Write the snapshots that changed</td></tr>
+              <tr><td><code>--coverage</code></td><td>Collect coverage and print a report</td></tr>
+              <tr><td><code>--silent</code></td><td>Do not print what the tests write to the console</td></tr>
+              <tr><td><code>-w, --maxWorkers</code></td><td>Number of workers, or a percentage of the cores (<code>50%</code>)</td></tr>
+              <tr><td><code>-i, --runInBand</code></td><td>Run every file in the main thread</td></tr>
+              <tr><td><code>--pool forks</code></td><td>Run the files in child processes, as Jest does</td></tr>
+              <tr><td><code>--bail &lt;n&gt;</code></td><td>Stop after <code>n</code> files failed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Every flag is in the <a href="api.html#cli">API reference</a>.</p>
+
+        <h2 id="configuration">Configuration</h2>
+        <p>Most projects need none. When there is, vynta takes it from the first of these that exists:</p>
+        <ol>
+          <li><code>vynta.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>), or the file given with <code>--config</code></li>
+          <li>a <code>"vynta"</code> key in <code>package.json</code></li>
+          <li>your Jest configuration: <code>jest.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>, <code>.json</code>), or a <code>"jest"</code> key in <code>package.json</code></li>
+        </ol>
+        <pre><code class="language-js">// vynta.config.js
+module.exports = {
+  include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+  exclude: ['**/node_modules/**', '**/dist/**'],
+  setupFiles: ['./test/setup.js'],
+  testTimeout: 10000,
+  restoreMocks: true,
+  coverageThreshold: { global: { lines: 90 } },
+};</code></pre>
+        <p>
+          From a Jest configuration vynta takes <code>testTimeout</code>, <code>testMatch</code>,
+          <code>testPathIgnorePatterns</code>, <code>roots</code>, <code>setupFiles</code>,
+          <code>setupFilesAfterEnv</code>, <code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code>,
+          <code>maxWorkers</code>, <code>bail</code> and the coverage options. Every option is in the
+          <a href="api.html#config">API reference</a>.
+        </p>
+
+        <h2 id="tests">Tests and suites</h2>
+        <p>
+          <code>test</code> (or <code>it</code>) declares a test; <code>describe</code> groups tests, and its name is
+          part of theirs. Modifiers change how they run:
+        </p>
+        <pre><code class="language-js">describe('orders', () => {
+  test('are created', () => {});
+  test.skip('are archived', () => {});       // not run
+  test.todo('are refunded');                 // a reminder
+  test.only('are paid', () => {});           // only the .only tests of the file run
+  test.fails('reject a negative total', () => {
+    expect(-1).toBeGreaterThan(0);           // passes because it fails
+  });
+  test.skipIf(process.platform === 'win32')('use symlinks', () => {});
+  test.runIf(process.env.CI)('run on CI only', () => {});
+});
+
+describe.skip('invoices', () => {});         // every test inside is skipped</code></pre>
+
+        <h3 id="each">One test per case</h3>
+        <p>
+          <code>test.each</code> declares a test for every case of a table. The name takes the values with
+          <code>printf</code>-style placeholders (<code>%s</code>, <code>%d</code>, <code>%i</code>, <code>%f</code>,
+          <code>%j</code>, <code>%o</code>, <code>%p</code>, <code>%#</code> for the index), or with
+          <code>$name</code> for the keys of object cases:
+        </p>
+        <pre><code class="language-js">test.each([
+  [1, 1, 2],
+  [2, 3, 5],
+])('%i + %i = %i', (a, b, expected) => {
+  expect(a + b).toBe(expected);
+});
+
+test.each([{ name: 'Ann', age: 30 }])('$name is $age', ({ age }) => {
+  expect(age).toBeGreaterThan(18);
+});
+
+test.each`
+  a    | b    | sum
+  ${1} | ${1} | ${2}
+`('$a + $b = $sum', ({ a, b, sum }) => {
+  expect(a + b).toBe(sum);
+});</code></pre>
+        <p>
+          <code>describe.each</code> does the same with suites. <code>test.for</code> is Vitest's variant: the case is
+          given as it is (not spread), followed by the test context.
+        </p>
+
+        <h3 id="concurrent">Concurrent tests</h3>
+        <p>
+          Tests marked <code>.concurrent</code> (or in a <code>describe.concurrent</code>) run at the same time, up to
+          <code>maxConcurrency</code> (5) at once. Use the <code>expect</code> of the test context in them, so each
+          assertion belongs to its test.
+        </p>
+        <pre><code class="language-js">test.concurrent('loads the user', async ({ expect }) => {
+  expect(await loadUser(1)).toMatchObject({ id: 1 });
+});</code></pre>
+
+        <h2 id="hooks">Hooks</h2>
+        <p>
+          <code>beforeAll</code> and <code>afterAll</code> run once around the tests of their <code>describe</code> (or
+          of the file, at the top level); <code>beforeEach</code> and <code>afterEach</code> around every test. They run
+          in Jest's order: the <code>beforeEach</code> hooks from the outside in, the <code>afterEach</code> hooks from
+          the inside out.
+        </p>
+        <pre><code class="language-js">let db;
+
+beforeAll(async () => {
+  db = await connect();
+});
+
+afterAll(() => db.close());
+
+beforeEach(async () => {
+  await db.seed();
+  // A function returned by beforeEach runs after the test, as in Vitest.
+  return () => db.clear();
+});</code></pre>
+        <p>
+          When a <code>beforeAll</code> fails, the tests of its suite are reported as failed with its error, and its
+          <code>afterAll</code> still runs.
+        </p>
+
+        <h2 id="async">Async tests</h2>
+        <p>
+          A test that returns a promise ends when the promise settles. A test (or hook) that takes a parameter which is
+          not the test context gets Jest's <code>done</code> callback, and ends when it is called:
+        </p>
+        <pre><code class="language-js">test('async/await', async () => {
+  expect(await fetchUser(1)).toEqual({ id: 1 });
+});
+
+test('done callback', (done) => {
+  emitter.once('ready', () => done());
+  emitter.start();
+});</code></pre>
+        <p>
+          A test fails when it takes longer than its timeout: 5 seconds, or <code>testTimeout</code> in the
+          configuration, or the number given after the test function (<code>test(name, fn, 10000)</code>). An error
+          thrown later by a timer, or a promise nobody handles, fails the test that was running.
+        </p>
+        <div class="callout">
+          <p>
+            A <code>.resolves</code> or <code>.rejects</code> assertion you forget to <code>await</code> still fails its
+            test: vynta waits for it before the test ends.
+          </p>
+        </div>
+
+        <h3 id="retry">Retries</h3>
+        <p>
+          <code>retry</code> runs a failing test again, up to that many times: <code>test(name, { retry: 2 }, fn)</code>,
+          or <code>--retry 2</code> for all of them. <code>repeats</code> runs a passing test that many more times, to
+          catch flaky ones.
+        </p>
+
+        <h2 id="context">Test context and fixtures</h2>
+        <p>
+          Every test gets a context object, as in Vitest: its <code>task</code> (name, file), an <code>expect</code> of
+          its own, <code>skip()</code>, <code>signal</code> (aborted when the test ends), and
+          <code>onTestFinished</code> / <code>onTestFailed</code> to register clean-ups.
+        </p>
+        <pre><code class="language-js">test('writes a temporary file', ({ task, onTestFinished, skip }) => {
+  skip(!process.env.TMPDIR, 'needs TMPDIR');
+  const file = createTempFile(task.name);
+  onTestFinished(() => removeFile(file));
+});</code></pre>
+        <p>
+          <code>test.extend</code> declares fixtures: values, or functions that set something up, hand it to the test with
+          <code>use()</code> and tear it down after. A test only sets up the fixtures it destructures.
+        </p>
+        <pre><code class="language-js">const dbTest = test.extend({
+  db: async ({}, use) => {
+    const db = await connect();
+    await use(db);
+    await db.close();
+  },
+  user: async ({ db }, use) => {
+    await use(await db.users.insert({ name: 'Ann' }));
+  },
+});
+
+dbTest('finds the user', async ({ db, user }) => {
+  expect(await db.users.find(user.id)).toEqual(user);
+});</code></pre>
+
+        <h2 id="assertions">Assertions</h2>
+        <p>
+          <code>expect(value)</code> has every matcher of Jest and the ones Vitest adds. <code>.not</code> negates them;
+          <code>.resolves</code> and <code>.rejects</code> apply them to what a promise settles to.
+        </p>
+        <pre><code class="language-js">expect(total).toBe(20);
+expect(user).toEqual({ id: 1, name: 'Ann' });        // deep equality
+expect(user).toStrictEqual(new User(1, 'Ann'));      // also checks classes and undefined properties
+expect(response).toMatchObject({ status: 200 });     // a subset
+expect(list).toContain('apple');
+expect(order).toHaveProperty('lines[0].price', 10);
+expect(() => parse('{')).toThrow(/Unexpected end/);
+await expect(save(user)).resolves.toBeUndefined();
+await expect(load(-1)).rejects.toThrow('not found');</code></pre>
+        <p>Asymmetric matchers stand for any value that passes a check, inside the expected value:</p>
+        <pre><code class="language-js">expect(created).toEqual({
+  id: expect.any(String),
+  createdAt: expect.any(Date),
+  tags: expect.arrayContaining(['new']),
+  email: expect.stringMatching(/@example\.com$/),
+});</code></pre>
+        <h3 id="assertion-helpers">More tools</h3>
+        <ul>
+          <li><code>expect.soft(value)</code> records the failure and lets the test go on, to see every failure at once.</li>
+          <li><code>expect.poll(() =&gt; value).toBe(x)</code> retries until the assertion passes or a timeout ends.</li>
+          <li><code>expect.assertions(n)</code> and <code>expect.hasAssertions()</code> check that the assertions really ran (in callbacks, for example).</li>
+          <li><code>expect.extend({ toBeWithin(received, a, b) { ... } })</code> adds matchers, usable as asymmetric matchers too.</li>
+        </ul>
+        <p>Every matcher is listed in the <a href="api.html#matchers">API reference</a>.</p>
+
+        <h2 id="mocks">Mock functions</h2>
+        <p>
+          <code>vi.fn()</code> (the same as <code>jest.fn()</code>) makes a function that records its calls. Its
+          implementation can be set, for every call or for the next ones:
+        </p>
+        <pre><code class="language-js">const send = vi.fn().mockResolvedValue({ ok: true });
+
+await notify(send, 'ann@example.com');
+
+expect(send).toHaveBeenCalledTimes(1);
+expect(send).toHaveBeenCalledWith('ann@example.com', expect.any(String));
+expect(send.mock.calls[0][0]).toBe('ann@example.com');</code></pre>
+        <p><code>vi.spyOn(object, 'method')</code> replaces a method with a mock that calls the original, until it is restored:</p>
+        <pre><code class="language-js">const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+expect(roll()).toBe(4);
+spy.mockRestore();</code></pre>
+        <p>
+          <code>vi.clearAllMocks()</code> forgets the calls of every mock, <code>vi.resetAllMocks()</code> also their
+          implementations, <code>vi.restoreAllMocks()</code> puts back what spies replaced. The options
+          <code>clearMocks</code>, <code>resetMocks</code> and <code>restoreMocks</code> do it before every test. Spies are
+          always restored when a file ends. <code>vi.stubGlobal</code> and <code>vi.stubEnv</code> replace a global or an
+          environment variable until the file ends.
+        </p>
+
+        <h2 id="module-mocks">Module mocks</h2>
+        <p>
+          <code>vi.mock(path, factory)</code> (or <code>jest.mock</code>) replaces a module with what the factory returns,
+          for the test file and everything it loads. The calls are moved to the top of the file, before its imports, as
+          Jest and Vitest do:
+        </p>
+        <pre><code class="language-js">import { describe, expect, it, vi } from 'vitest';
+import { sendWelcome } from './signup.js';
+import { sendMail } from './mailer.js';
+
+vi.mock('./mailer.js', () => ({ sendMail: vi.fn() }));
+
+it('sends a welcome mail', async () => {
+  await sendWelcome('ann@example.com');
+  expect(sendMail).toHaveBeenCalledWith('ann@example.com', 'Welcome!');
+});</code></pre>
+        <ul>
+          <li><strong>Keep part of the module:</strong> the factory gets <code>importOriginal</code> in ES modules; <code>jest.requireActual(path)</code> works anywhere.</li>
+          <li><strong>Values for the factory:</strong> <code>vi.hoisted(() =&gt; ...)</code> runs before the mocks, so its values can be used in factories.</li>
+          <li><strong>No factory:</strong> vynta uses the file in a <code>__mocks__</code> folder next to the module (or at the root of the project, for packages), or mocks every function of the real module (automock).</li>
+          <li><strong>Modules that do not exist:</strong> <code>jest.mock('virtual', factory, { virtual: true })</code>.</li>
+          <li><strong>Not hoisted:</strong> <code>vi.doMock</code> and <code>vi.doUnmock</code> apply from where they are called.</li>
+        </ul>
+        <pre><code class="language-js">const { spy } = vi.hoisted(() =&gt; ({ spy: vi.fn() }));
+
+vi.mock('./dep.js', async (importOriginal) =&gt; ({
+  ...(await importOriginal()),
+  save: spy,
+}));</code></pre>
+        <p>Mocks are forgotten when the file ends: other files get the real modules.</p>
+
+        <h2 id="timers">Fake timers</h2>
+        <p>
+          <code>vi.useFakeTimers()</code> replaces <code>setTimeout</code>, <code>setInterval</code>,
+          <code>setImmediate</code>, <code>Date</code> and <code>performance.now</code> by a clock that only moves when the
+          test moves it:
+        </p>
+        <pre><code class="language-js">beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+test('retries after a second', () => {
+  const retry = vi.fn();
+  scheduleRetry(retry);
+  vi.advanceTimersByTime(999);
+  expect(retry).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(retry).toHaveBeenCalled();
+});
+
+test('uses today', () => {
+  vi.setSystemTime(new Date('2030-01-01'));
+  expect(today()).toBe('2030-01-01');
+});</code></pre>
+        <p>
+          The <code>Async</code> variants (<code>advanceTimersByTimeAsync</code>, <code>runAllTimersAsync</code>...) let
+          pending promises settle between one timer and the next. vynta's own timeouts always use the real clock.
+        </p>
+
+        <h2 id="snapshots">Snapshots</h2>
+        <p>
+          <code>toMatchSnapshot()</code> saves a value the first time, in <code>__snapshots__/&lt;file&gt;.snap</code>, and
+          compares it with the saved one after. <code>toMatchInlineSnapshot()</code> writes it into the test itself:
+        </p>
+        <pre><code class="language-js">test('renders the invoice', () => {
+  expect(render(invoice)).toMatchSnapshot();
+  expect(total(invoice)).toMatchInlineSnapshot(`42`);
+});
+
+test('ids change, their type does not', () => {
+  expect(createUser()).toMatchSnapshot({ id: expect.any(String) });
+});</code></pre>
+        <p>
+          When a value changes on purpose, <code>vynta -u</code> updates the snapshots, and removes the ones no test uses when every test of the file ran.
+          On CI (<code>CI</code> set, or <code>--ci</code>) new snapshots are not written: a missing snapshot fails.
+          The <code>.snap</code> files of Jest and Vitest are read and written in their own format, so existing
+          snapshots keep matching.
+        </p>
+
+        <h2 id="coverage">Coverage</h2>
+        <p>
+          <code>vynta --coverage</code> reports which lines, functions and branches of your code the tests ran. V8 counts
+          them as the code runs; nothing is instrumented, so the tests run nearly as fast as without coverage.
+        </p>
+        <pre><code class="language-bash">npx vynta --coverage</code></pre>
+        <div class="terminal">
+          <div class="terminal-bar"><span></span><span></span><span></span></div>
+          <pre><code class="nohighlight">----------------|---------|----------|---------|---------|-------------------
+File            | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+----------------|---------|----------|---------|---------|-------------------
+All files       |   <span class="t-ok">94.49</span> |    <span class="t-ok">92.41</span> |   <span class="t-ok">94.65</span> |   <span class="t-ok">94.49</span> |
+src/cart.js     |  <span class="t-ok">100.00</span> |   <span class="t-ok">100.00</span> |  <span class="t-ok">100.00</span> |  <span class="t-ok">100.00</span> |
+src/prices.js   |   <span class="t-warn">56.52</span> |    <span class="t-ok">83.72</span> |  <span class="t-ok">100.00</span> |   <span class="t-warn">56.52</span> | <span class="t-fail">15-25,28-34</span>
+----------------|---------|----------|---------|---------|-------------------</code></pre>
+        </div>
+        <p>
+          It also writes <code>coverage/lcov.info</code>, for editors and services. The report counts the project files the
+          tests load, not the tests themselves nor <code>node_modules</code>. The options:
+        </p>
+        <pre><code class="language-js">module.exports = {
+  collectCoverageFrom: ['src/**', '!src/generated/**'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov'],
+  coverageThreshold: { global: { lines: 90, functions: 90 } },
+};</code></pre>
+        <p>
+          Lines are counted as Jest counts them: blank lines, comments and lines with only brackets are not lines of
+          code. Branches are the blocks V8 counts, which can differ a little from what istanbul reports.
+        </p>
+
+        <h2 id="isolation">Workers and isolation</h2>
+        <p>
+          vynta runs the files in parallel, in worker threads that stay alive between files. Each file gets fresh copies
+          of your own modules (what it changes in them does not reach the next file), while <code>node_modules</code>
+          stays loaded, which is where most of the loading time is.
+        </p>
+        <ul>
+          <li>
+            <strong>How many workers:</strong> after the first run, vynta knows how long each file takes. It starts the
+            slowest first, and uses just enough workers for the slowest file to be the whole run: more would only add
+            startup time and compete for the cores. <code>-w</code> sets the number.
+          </li>
+          <li>
+            <strong><code>--pool forks</code></strong> runs the files in child processes, as Jest does, for code that
+            needs a process of its own: <code>process.chdir</code>, native addons that are not thread safe.
+          </li>
+          <li>
+            <strong><code>-i</code></strong> runs everything in the main thread: the fastest for a few small files, and
+            the easiest to debug.
+          </li>
+          <li>
+            <strong><code>--no-isolate</code></strong> shares your modules between the files of a worker: faster still,
+            for suites whose files do not change shared state.
+          </li>
+        </ul>
+
+        <h3 id="split-files">Splitting long files</h3>
+        <p>
+          A run is never shorter than its slowest file. When that file's tests do not depend on each other (each one sets
+          up what it needs), vynta can run it in parts on several workers: every part loads the file, runs its hooks and
+          one test of every few, and the results come back as one file. Allow it for those files:
+        </p>
+        <pre><code class="language-js">// vynta.config.js
+module.exports = {
+  splitFiles: ['test/e2e/**'], // or true, for every file
+};</code></pre>
+        <p>
+          vynta splits a file only when it is one of the long ones and when splitting pays: a part repeats the file's
+          setup (its <code>beforeAll</code>, the servers it starts), so files that spend most of their time in setup stay
+          whole. It also leaves cores free, as tests that start servers of their own compete for them.
+        </p>
+
+        <h2 id="typescript">TypeScript and ES modules</h2>
+        <p>
+          vynta loads files with Node.js, so what Node.js runs, vynta runs: CommonJS, ES modules (<code>.mjs</code>, or
+          <code>"type": "module"</code>), and TypeScript (<code>.ts</code>, <code>.mts</code>, <code>.cts</code>) through
+          the type stripping of Node.js 22.18 and later. There is no build step and no source map to go wrong: errors
+          point at your lines.
+        </p>
+        <div class="callout">
+          <p>
+            Type stripping removes types; it does not compile TypeScript-only syntax such as <code>enum</code> or
+            parameter properties. JSX is not supported yet.
+          </p>
+        </div>
+
+        <h2 id="speed">Why it is fast</h2>
+        <p>Measured on real suites, most of a test run is not the tests. vynta removes what it can of the rest:</p>
+        <ul>
+          <li><strong>No transform pipeline.</strong> Files are loaded by Node.js as they are, instead of going through Babel or Vite first.</li>
+          <li><strong>Warm workers.</strong> Dependencies are loaded once per worker, not once per file.</li>
+          <li><strong>Caches between runs</strong>, in <code>node_modules/.cache/vynta</code>: the duration of every file, where <code>require()</code> found each dependency (resolving a large dependency tree probes the file system thousands of times), and V8's compiled code.</li>
+          <li><strong>The slowest file first</strong>, on just enough workers.</li>
+          <li><strong>Assertions that cost nothing when they pass.</strong> Messages, diffs and code frames are only built for failures.</li>
+        </ul>
+        <p>The <a href="benchmarks.html">benchmarks</a> show where the time goes, runner by runner.</p>
+
+        <h2 id="faq">FAQ</h2>
+        <h3>Do I have to change my tests?</h3>
+        <p>
+          Usually not. vynta runs Jest and Vitest tests as they are, including their imports and your Jest
+          configuration. <a href="migrating.html">Migrating</a> lists the few differences.
+        </p>
+        <h3>My tests call <code>process.send</code>.</h3>
+        <p>
+          Jest runs tests in child processes, where <code>process.send</code> exists. In vynta's worker threads it is
+          there too, and does nothing; with <code>--pool forks</code> it is the real one.
+        </p>
+        <h3>What is not supported yet?</h3>
+        <p>
+          Watch mode, browser-like environments (<code>jsdom</code>, <code>happy-dom</code>), JSX, type checking,
+          sharding, and coverage of the files no test loads.
+        </p>
+        <h3>Where is the cache, and can I delete it?</h3>
+        <p>
+          In <code>node_modules/.cache/vynta</code>. Deleting it is always safe: the next run is slower while it fills
+          it again. It is rebuilt by itself when your dependencies change.
+        </p>
+      </article>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <span>vynta is MIT licensed. &copy; Jes&uacute;s Seijas</span>
+        <span>
+          <a href="guide.html">Guide</a> &middot; <a href="api.html">API</a> &middot; <a href="benchmarks.html">Benchmarks</a> &middot;
+          <a href="migrating.html">Migrating</a> &middot; <a href="https://github.com/jesus-seijas-sp/vynta">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/vynta">npm</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
