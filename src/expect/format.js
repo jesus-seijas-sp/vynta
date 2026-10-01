@@ -99,6 +99,26 @@ function formatLeaf(value, tag, options) {
   }
 }
 
+const isDomNode = (value) =>
+  typeof value?.nodeType === 'number' && typeof value.nodeName === 'string' && typeof value.cloneNode === 'function';
+
+// A node of a document prints as its markup, as pretty-format's DOM plugins do. Its properties
+// reach the whole document (ownerDocument, parentNode) and would print it again from every node.
+function formatDomNode(node) {
+  switch (node.nodeType) {
+    case 3:
+      return quote(node.data);
+    case 8:
+      return `<!--${node.data}-->`;
+    case 9:
+      return '#document';
+    case 11:
+      return `<DocumentFragment>${[...node.childNodes].map(formatDomNode).join('')}</DocumentFragment>`;
+    default:
+      return node.outerHTML ?? `<${node.nodeName.toLowerCase()} />`;
+  }
+}
+
 class Printer {
   constructor(options) {
     this.options = options;
@@ -119,6 +139,9 @@ class Printer {
     }
     if (isAsymmetric(value)) {
       return formatAsymmetric(value);
+    }
+    if (isDomNode(value)) {
+      return formatDomNode(value);
     }
     if (this.seen.includes(value)) {
       return '[Circular]';
