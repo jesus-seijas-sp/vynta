@@ -85,14 +85,27 @@ function walk(dir, visit, depth = 0) {
 // Every file under `from` whose path matches one of the patterns, as the specifier Vite would key by.
 function matches(patterns, from) {
   const found = new Set();
+  const add = (file) => {
+    const relative = path.relative(from, file).split(path.sep).join('/');
+    found.add(relative.startsWith('.') ? relative : `./${relative}`);
+  };
   patterns.forEach((pattern) => {
-    const base = path.resolve(from, pattern.slice(0, Math.max(0, pattern.search(/[*?[]/))) || '.');
-    const dir = fs.existsSync(base) && fs.statSync(base).isDirectory() ? base : path.dirname(base);
+    const wildcard = pattern.search(/[*?[{]/);
+    // A pattern naming one file ('../../main.tsx') is that file.
+    if (wildcard === -1) {
+      const file = path.resolve(from, pattern);
+      if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+        add(file);
+      }
+      return;
+    }
+    // The walk starts at the last directory before the first wildcard, which may be above `from`.
+    const prefix = pattern.slice(0, wildcard);
+    const base = path.resolve(from, prefix.slice(0, prefix.lastIndexOf('/') + 1) || '.');
     const regexp = globToRegExp(path.resolve(from, pattern));
-    walk(dir, (file) => {
+    walk(base, (file) => {
       if (regexp.test(file)) {
-        const relative = path.relative(from, file).split(path.sep).join('/');
-        found.add(relative.startsWith('.') ? relative : `./${relative}`);
+        add(file);
       }
     });
   });
