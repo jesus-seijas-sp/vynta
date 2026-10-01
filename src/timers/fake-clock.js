@@ -29,18 +29,28 @@ function createHandle(clock, timer) {
   return handle;
 }
 
-// A fake clock: timers are kept in a map and only run when the test moves the time.
+// A fake clock: timers are kept in a map and only run when the test moves the time, or, with
+// shouldAdvanceTime, also as real time passes, `advanceTimeDelta` ms at a time.
 class FakeClock {
   #saved = new Map();
 
   #nextId = 1;
 
-  constructor({ now = realTimers.Date.now(), toFake, loopLimit = DEFAULT_LOOP_LIMIT } = {}) {
+  #advancing = null;
+
+  constructor({
+    now = realTimers.Date.now(),
+    toFake,
+    loopLimit = DEFAULT_LOOP_LIMIT,
+    shouldAdvanceTime = false,
+    advanceTimeDelta = 20,
+  } = {}) {
     this.now = Number(now);
     this.origin = this.now;
     this.timers = new Map();
     this.toFake = new Set(toFake);
     this.loopLimit = loopLimit;
+    this.advanceTime = shouldAdvanceTime ? advanceTimeDelta : 0;
   }
 
   add(type, callback, delay, args) {
@@ -194,9 +204,17 @@ class FakeClock {
     this.replace('nextTick', process, 'nextTick', (cb, ...args) => this.add('immediate', cb, 0, args));
     this.replace('Date', g, 'Date', this.fakeDate());
     this.replace('performance', g.performance, 'now', () => this.now - this.origin);
+    if (this.advanceTime > 0) {
+      this.#advancing = realTimers.setInterval(() => this.tick(this.advanceTime), this.advanceTime);
+      this.#advancing.unref?.();
+    }
   }
 
   uninstall() {
+    if (this.#advancing) {
+      realTimers.clearInterval(this.#advancing);
+      this.#advancing = null;
+    }
     this.#saved.forEach(({ target, key, descriptor }) => {
       if (descriptor) {
         Object.defineProperty(target, key, descriptor);

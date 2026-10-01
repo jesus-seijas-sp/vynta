@@ -24,8 +24,14 @@ function requireClock(method) {
 
 function useFakeTimers(config = {}) {
   clock?.uninstall();
-  const { toFake, doNotFake = [], now, loopLimit } = config ?? {};
-  clock = new FakeClock({ now, loopLimit, toFake: toFake ?? DEFAULT_FAKE.filter((name) => !doNotFake.includes(name)) });
+  const { toFake, doNotFake = [], now, loopLimit, shouldAdvanceTime, advanceTimeDelta } = config ?? {};
+  clock = new FakeClock({
+    now,
+    loopLimit,
+    shouldAdvanceTime,
+    advanceTimeDelta,
+    toFake: toFake ?? DEFAULT_FAKE.filter((name) => !doNotFake.includes(name)),
+  });
   clock.install();
 }
 
