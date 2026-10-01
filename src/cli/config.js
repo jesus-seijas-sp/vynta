@@ -54,6 +54,8 @@ const DEFAULTS = {
   environmentOptions: undefined,
   // Set false to load files as they are, even when they need JSX compiled away.
   transform: undefined,
+  // V8's on-disk code cache for the modules loaded (off: see cli/index.js).
+  compileCache: false,
   // Vite plugins whose transform hooks rewrite the project's source (synchronous hooks only).
   plugins: [],
   // Jest's moduleNameMapper: { '<regex>': '<rootDir>/path/$1' }, for the aliases a bundler would resolve.

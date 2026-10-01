@@ -48,7 +48,6 @@ function loadingCaches(rootDir) {
   }
   return {
     resolveCache: { file: cacheFile(rootDir), stamp: dependencyStamp(rootDir) },
-    compileCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vynta', 'v8'),
     transformCacheDir: path.join(rootDir, 'node_modules', '.cache', 'vynta', 'compiled'),
   };
 }
@@ -136,6 +135,12 @@ async function main(argv = process.argv.slice(2)) {
   // Coverage leaves out the test files themselves.
   config.testFiles = files;
   Object.assign(config, loadingCaches(config.rootDir));
+  // V8 keys its code cache by module URL, and each test file imports the project's modules under URLs of
+  // its own: the cache grows by a copy per file and run and is rarely read back. Measured slower than
+  // compiling, so it is only kept for configs that ask (compileCache: true).
+  if (config.compileCache === true) {
+    config.compileCacheDir = path.join(config.rootDir, 'node_modules', '.cache', 'vynta', 'v8');
+  }
   if (inline) {
     runner = new InlineRunner({ config, onResult });
   } else {
