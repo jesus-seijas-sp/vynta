@@ -11,6 +11,10 @@ const DEFAULT_FAKE = [
   'clearImmediate',
   'Date',
   'performance',
+  'requestAnimationFrame',
+  'cancelAnimationFrame',
+  'requestIdleCallback',
+  'cancelIdleCallback',
 ];
 
 let clock = null;

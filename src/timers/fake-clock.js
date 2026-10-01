@@ -29,6 +29,9 @@ function createHandle(clock, timer) {
   return handle;
 }
 
+const FRAME_MS = 16;
+const IDLE_PERIOD_MS = 50;
+
 // A fake clock: timers are kept in a map and only run when the test moves the time, or, with
 // shouldAdvanceTime, also as real time passes, `advanceTimeDelta` ms at a time.
 class FakeClock {
@@ -204,6 +207,21 @@ class FakeClock {
     this.replace('nextTick', process, 'nextTick', (cb, ...args) => this.add('immediate', cb, 0, args));
     this.replace('Date', g, 'Date', this.fakeDate());
     this.replace('performance', g.performance, 'now', () => this.now - this.origin);
+    // A document's frame and idle callbacks, as sinon fakes them; only where the environment has them.
+    if (typeof g.requestAnimationFrame === 'function') {
+      this.replace('requestAnimationFrame', g, 'requestAnimationFrame', (cb) =>
+        this.add('timeout', () => cb(this.now - this.origin), FRAME_MS - ((this.now - this.origin) % FRAME_MS), [])
+      );
+      this.replace('cancelAnimationFrame', g, 'cancelAnimationFrame', (handle) => this.clear(handle));
+    }
+    if (typeof g.requestIdleCallback === 'function') {
+      this.replace('requestIdleCallback', g, 'requestIdleCallback', (cb, options) => {
+        const idle = this.timers.size > 0 ? IDLE_PERIOD_MS : 0;
+        const delay = options?.timeout ? Math.min(options.timeout, idle) : idle;
+        return this.add('timeout', () => cb({ didTimeout: false, timeRemaining: () => IDLE_PERIOD_MS }), delay, []);
+      });
+      this.replace('cancelIdleCallback', g, 'cancelIdleCallback', (handle) => this.clear(handle));
+    }
     if (this.advanceTime > 0) {
       this.#advancing = realTimers.setInterval(() => this.tick(this.advanceTime), this.advanceTime);
       this.#advancing.unref?.();
