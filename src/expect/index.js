@@ -27,6 +27,11 @@ expect.extend = (newMatchers) => {
 
 expect.soft = (actual, message) => createAssertion(actual, message, true);
 
+// Chai's, which vitest's expect carries: fails the test with the message given.
+expect.fail = (message = 'expect.fail()') => {
+  throw new AssertionError(message);
+};
+
 expect.assertions = (count) => {
   if (state.test) {
     state.test.expectedAssertions = count;
