@@ -178,6 +178,26 @@ class FakeClock {
     }
   }
 
+  fakePerformance(real) {
+    const prototype = Object.getPrototypeOf(real) ?? {};
+    const fake = {};
+    Object.getOwnPropertyNames(prototype)
+      .filter(
+        (name) =>
+          name !== 'constructor' && typeof Object.getOwnPropertyDescriptor(prototype, name)?.value === 'function'
+      )
+      .forEach((name) => {
+        fake[name] = name.startsWith('getEntries') ? () => [] : () => undefined;
+      });
+    const entry = (name, entryType, duration) => ({ name, entryType, startTime: 0, duration, toJSON: () => ({}) });
+    return Object.assign(fake, {
+      now: () => this.now - this.origin,
+      timeOrigin: this.origin,
+      mark: (name) => entry(name, 'mark', 0),
+      measure: (name) => entry(name, 'measure', 100),
+    });
+  }
+
   fakeDate() {
     const clock = this;
     const RealDate = realTimers.Date;
@@ -206,7 +226,11 @@ class FakeClock {
     this.replace('queueMicrotask', g, 'queueMicrotask', (cb) => this.add('immediate', cb, 0, []));
     this.replace('nextTick', process, 'nextTick', (cb, ...args) => this.add('immediate', cb, 0, args));
     this.replace('Date', g, 'Date', this.fakeDate());
-    this.replace('performance', g.performance, 'now', () => this.now - this.origin);
+    // As sinon does: the global becomes a performance of its own. Code that kept the real one (React's
+    // scheduler) keeps real time, and a spy a test puts on performance.now() reaches only the fake.
+    if (g.performance) {
+      this.replace('performance', g, 'performance', this.fakePerformance(g.performance));
+    }
     // A document's frame and idle callbacks, as sinon fakes them; only where the environment has them.
     if (typeof g.requestAnimationFrame === 'function') {
       this.replace('requestAnimationFrame', g, 'requestAnimationFrame', (cb) =>
