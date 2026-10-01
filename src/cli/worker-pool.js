@@ -1,5 +1,6 @@
 const { serializeError } = require('../run/serialize-error');
 const { createWorker } = require('./worker-handle');
+const { environmentOf } = require('../environment');
 
 // The result of a job whose worker died while running it.
 const failed = (result) => result.errors.length > 0 || result.tests.some((test) => test.status === 'failed');
@@ -16,7 +17,9 @@ const crashResult = (job, error) => ({
 // Runs test files on worker threads (or child processes, with pool: 'forks'). Files are handed out one at a time as workers become free, so a slow file
 // never holds others back behind it; each worker keeps its module cache warm between files. A worker whose file
 // failed is replaced: a failure can leave a dependency's module state broken (React stuck mid-render), and every
-// later file on that worker would fail with it.
+// later file on that worker would fail with it. A worker also keeps to one document environment: a library loaded
+// under happy-dom holds on to that document (Testing Library's screen), and a jsdom file after it would query the
+// wrong one. Files that need no document run on any worker.
 class WorkerPool {
   constructor({ size, config, onResult }) {
     this.size = size;
@@ -30,7 +33,8 @@ class WorkerPool {
 
   // Runs the jobs ({ path, shard }); resolves with what the workers collected.
   run(jobs) {
-    this.queue = [...jobs];
+    const fallback = this.config.environment ?? 'node';
+    this.queue = jobs.map((job) => ({ ...job, environment: environmentOf(job.path) ?? fallback }));
     const { promise, resolve } = Promise.withResolvers();
     this.done = () => resolve(this.collected);
     const count = Math.min(this.size, this.queue.length);
@@ -48,9 +52,22 @@ class WorkerPool {
     this.workers.add(worker);
     let current = null;
     let replacing = false;
+    let environment = null;
     const next = () => {
-      current = this.queue.shift() ?? null;
-      worker.send(current ? { type: 'run', path: current.path, shard: current.shard } : { type: 'finish' });
+      const index = this.queue.findIndex(
+        (job) => job.environment === 'node' || environment === null || job.environment === environment
+      );
+      if (index === -1) {
+        // What is left needs another document: a fresh worker takes it.
+        replacing = this.queue.length > 0;
+        worker.send({ type: 'finish' });
+        return;
+      }
+      [current] = this.queue.splice(index, 1);
+      if (current.environment !== 'node') {
+        environment = current.environment;
+      }
+      worker.send({ type: 'run', path: current.path, shard: current.shard });
     };
     worker.on('message', (message) => {
       // Messages the code under test sends (process.send in a child process) are not for the pool.

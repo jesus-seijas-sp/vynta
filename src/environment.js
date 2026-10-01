@@ -112,15 +112,13 @@ function load(name, rootDir) {
   }
 }
 
-// Node already has these, but they must come from the document: a request built with the window's
-// Request read by Node's fetch (or the reverse) loses its body, and an event from one realm is not an
-// Event to the other. Every other global Node already owns stays Node's.
-const FROM_WINDOW = new Set([
+// Node already has these, but they must come from the document: an event from one realm is not an
+// Event to the other. Every other global Node already owns stays Node's, as in vitest.
+const DOM_GLOBALS = [
   'Event',
   'EventTarget',
   'CustomEvent',
   'MessageEvent',
-  'MessagePort',
   'Crypto',
   'Performance',
   'Navigator',
@@ -129,15 +127,26 @@ const FROM_WINDOW = new Set([
   'File',
   'FormData',
   'WebSocket',
-  'fetch',
-  'Request',
-  'Response',
-  'Headers',
-  'AbortController',
-  'AbortSignal',
-  'URL',
-  'URLSearchParams',
-]);
+];
+
+// happy-dom brings its own fetch, and its Request read by Node's fetch (or the reverse) loses the body,
+// so the whole family comes from it. jsdom has no fetch: Node's stays, and so must the AbortSignal and
+// URL it accepts.
+const FROM_WINDOW = {
+  'happy-dom': new Set([
+    ...DOM_GLOBALS,
+    'MessagePort',
+    'fetch',
+    'Request',
+    'Response',
+    'Headers',
+    'AbortController',
+    'AbortSignal',
+    'URL',
+    'URLSearchParams',
+  ]),
+  jsdom: new Set(DOM_GLOBALS),
+};
 
 const SELF_REFERENCES = ['window', 'self', 'top', 'parent'];
 
@@ -162,11 +171,11 @@ function createWindow(name, rootDir, url, options = {}) {
   }).window;
 }
 
-function shouldCopy(key) {
+function shouldCopy(key, fromWindow) {
   if (KEEP_NODE.has(key) || INTRINSICS.has(key) || SELF_REFERENCES.includes(key)) {
     return false;
   }
-  return !(key in globalThis) || FROM_WINDOW.has(key);
+  return !(key in globalThis) || fromWindow.has(key);
 }
 
 // The window's own properties and its prototypes' (jsdom keeps addEventListener and the like on
@@ -184,11 +193,12 @@ function windowKeys(window) {
 // Each global reads through to the window, so a property the window computes from its own state
 // (document, location, innerWidth) stays live. A test that assigns one replaces it for everyone.
 // Methods are bound because the window's own expect `this` to be the window, not this thread's global.
-function populate(window) {
+function populate(window, name) {
   const originals = new Map();
-  // A window without one of them (jsdom has no fetch) leaves Node's in place.
-  const provided = [...FROM_WINDOW].filter((key) => window[key] !== undefined);
-  const keys = new Set([...windowKeys(window), ...provided].filter(shouldCopy));
+  const fromWindow = FROM_WINDOW[name] ?? FROM_WINDOW['happy-dom'];
+  // A window without one of them leaves Node's in place.
+  const provided = [...fromWindow].filter((key) => window[key] !== undefined);
+  const keys = new Set([...windowKeys(window), ...provided].filter((key) => shouldCopy(key, fromWindow)));
   keys.forEach((key) => {
     const value = window[key];
     const bound = typeof value === 'function' && key[0] !== key[0].toUpperCase() ? value.bind(window) : null;
@@ -236,7 +246,7 @@ function install(config = {}) {
     const window = createWindow(name, config.rootDir ?? process.cwd(), url, config.environmentOptions);
     created.set(name, { name, url, window });
   }
-  current = { ...created.get(name), ...populate(created.get(name).window) };
+  current = { ...created.get(name), ...populate(created.get(name).window, name) };
   return current;
 }
 
