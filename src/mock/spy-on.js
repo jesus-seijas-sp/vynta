@@ -1,4 +1,5 @@
 const { isClass } = require('../utils/is-class');
+const { exportSetter } = require('../modules/spyable');
 const { fn, isMockFunction, registerSpy } = require('./mock-function');
 
 // Finds the property on the object or its prototype chain: { owner, descriptor }.
@@ -53,9 +54,27 @@ function spyOnAccessor(object, key, descriptor, isOwn, accessType) {
   return spy;
 }
 
+// An export of a module made spyable (see modules/spyable.js): the spy goes in through the module.
+function spyOnExport(namespace, key, setExport) {
+  const original = namespace[key];
+  if (isMockFunction(original)) {
+    return original;
+  }
+  const spy = fn(function spied(...args) {
+    return original.apply(this, args);
+  }).mockName(String(key));
+  setExport(spy);
+  registerSpy(spy, original, () => setExport(original));
+  return spy;
+}
+
 function spyOn(object, key, accessType) {
   if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
     throw new Error(`Cannot spy on the ${String(key)} property of ${String(object)}`);
+  }
+  const setExport = exportSetter(object, key);
+  if (setExport) {
+    return spyOnExport(object, key, setExport);
   }
   const { owner, descriptor } = findProperty(object, key);
   if (!descriptor) {

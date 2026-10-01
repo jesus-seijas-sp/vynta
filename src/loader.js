@@ -3,6 +3,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const state = require('./state');
+const { isSpyable, makeSpyable, markSpyable } = require('./modules/spyable');
 const { configure: configureResolution, mapToFile, resolveFile, parentDir } = require('./resolve-paths');
 const {
   configure: configureTransform,
@@ -158,6 +159,9 @@ function hookEsm(config) {
       }
       if (!needsTransform(file)) {
         const loaded = nextLoad(url, context);
+        if (loaded.format === 'module' && isSpyable(file)) {
+          return { format: 'module', source: makeSpyable(String(loaded.source), url), shortCircuit: true };
+        }
         return loaded.format === 'commonjs' && file.includes(NODE_MODULES) && context.conditions.includes('import')
           ? { format: 'module', source: commonJsInterop(file), shortCircuit: true }
           : loaded;
@@ -167,7 +171,7 @@ function hookEsm(config) {
         return nextLoad(url, context);
       }
       // Node has no format for .tsx or .jsx and would refuse the file; the transform leaves ES modules.
-      return { format: 'module', source, shortCircuit: true };
+      return { format: 'module', source: isSpyable(file) ? makeSpyable(source, url) : source, shortCircuit: true };
     },
   });
 }
@@ -248,7 +252,10 @@ async function loadModule(file, config, fresh) {
   configureTransform(config);
   hookCjs();
   checkSupported(file);
-  if (MOCK_CALL.test(fs.readFileSync(file, 'utf8'))) {
+  const source = fs.readFileSync(file, 'utf8');
+  // eslint-disable-next-line global-require -- read the registry only once a file loads
+  markSpyable(file, source, require('./modules/registry').resolveKey);
+  if (MOCK_CALL.test(source)) {
     // eslint-disable-next-line global-require -- the mocking hooks are only loaded by the files that mock
     require('./modules/hooks').enableMocking(file, isEsm(file));
   }
