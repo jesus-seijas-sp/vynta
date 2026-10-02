@@ -328,6 +328,8 @@ function install(config = {}) {
       url,
       window,
       navigator: ownDescriptors(window.navigator),
+      // The elements the page started with, which libraries loaded once per thread hold on to.
+      page: { html: window.document.documentElement, head: window.document.head, body: window.document.body },
       prototypes: prototypesOf(window),
     });
   }
@@ -371,8 +373,31 @@ function clearCookies(document) {
 
 // The window outlives a test file: libraries loaded once per thread (Testing Library's `screen`)
 // hold its document. What a file put in it goes, so the next one starts as a new page would.
-function clearPage(window, url, navigator) {
+// A test may swap the document's elements (a full-page navigation replaces the <body>), and a library
+// loaded once per thread keeps the ones it saw first: Testing Library's screen searches the first
+// <body>. The page gets its own elements back before it is cleared, as a fresh document would have them.
+function restoreElements(document, page) {
+  if (!page) {
+    return;
+  }
+  if (document.documentElement !== page.html) {
+    document.replaceChild(page.html, document.documentElement);
+  }
+  if (document.head !== page.head) {
+    if (document.head) {
+      document.head.replaceWith(page.head);
+    } else {
+      page.html.prepend(page.head);
+    }
+  }
+  if (document.body !== page.body) {
+    document.body = page.body;
+  }
+}
+
+function clearPage(window, url, navigator, page) {
   const { document } = window;
+  restoreElements(document, page);
   if (navigator) {
     restoreOwn(window.navigator, navigator);
   }
@@ -405,7 +430,7 @@ function teardown() {
   if (!current) {
     return;
   }
-  const { window, url, keys, originals, navigator, prototypes } = current;
+  const { window, url, keys, originals, navigator, prototypes, page } = current;
   releaseListeners();
   current = null;
   [...keys, ...SELF_REFERENCES].forEach((key) => {
@@ -416,7 +441,7 @@ function teardown() {
       Reflect.deleteProperty(globalThis, key);
     }
   });
-  clearPage(window, url, navigator);
+  clearPage(window, url, navigator, page);
   prototypes.forEach(([prototype, descriptors]) => restoreChanged(prototype, descriptors));
 }
 
