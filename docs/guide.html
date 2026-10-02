@@ -180,6 +180,7 @@ npx vyntra -u                   # update the snapshots that changed</code></pre>
         <ol>
           <li><code>vyntra.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>), or the file given with <code>--config</code></li>
           <li>a <code>"vyntra"</code> key in <code>package.json</code></li>
+          <li>your Vitest configuration: <code>vitest.config.ts</code> (or <code>.mts</code>, <code>.js</code>, <code>.mjs</code>...), or a <code>vite.config.*</code> with a <code>test</code> section</li>
           <li>your Jest configuration: <code>jest.config.js</code> (or <code>.cjs</code>, <code>.mjs</code>, <code>.json</code>), or a <code>"jest"</code> key in <code>package.json</code></li>
         </ol>
         <pre><code class="language-js">// vyntra.config.js

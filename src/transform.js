@@ -1,10 +1,13 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { threadId } = require('node:worker_threads');
 const { applyPlugins, pluginNames } = require('./plugins');
 const Module = require('node:module');
 const { expand: expandGlobImports } = require('./glob-imports');
 const { scan, CODE } = require('./modules/scanner');
+const { compileOptions } = require('./tsconfig');
+const { markTypeImports } = require('./type-imports');
 
 // Node strips TypeScript types but does not understand JSX, so a project that uses it needs a
 // transform. vyntra brings none: it loads the one the project already has (esbuild, sucrase or
@@ -105,13 +108,18 @@ function jsonSource(file) {
 }
 
 let compiledDir = null;
+let compilerOverrides = {};
 
 function configure(config = {}) {
   rootDir = config.rootDir ?? process.cwd();
   enabled = config.transform !== false;
   compiledDir = config.transformCacheDir ?? null;
+  compilerOverrides = config.compilerOptions ?? {};
   cache.clear();
 }
+
+// The project's tsconfig.json, under what the config sets (a vitest config's Oxc or esbuild options).
+const typescriptOptions = () => ({ ...compileOptions(rootDir), ...compilerOverrides });
 
 // The project's transformer, looked up from the project rather than depended on.
 function findTransformer() {
@@ -126,7 +134,9 @@ function findTransformer() {
       return null;
     }
   };
-  loader = TRANSFORMERS.reduce((found, name) => found ?? load(name), null) ?? { name: null, module: null };
+  // Only TypeScript emits the decorator metadata dependency injection reads (Nest, Angular, TypeORM).
+  const order = typescriptOptions().emitDecoratorMetadata ? ['typescript', ...TRANSFORMERS] : TRANSFORMERS;
+  loader = order.reduce((found, name) => found ?? load(name), null) ?? { name: null, module: null };
   return loader;
 }
 
@@ -177,6 +187,7 @@ const LOADERS = { ts: 'ts', mts: 'ts', cts: 'ts', tsx: 'tsx', jsx: 'jsx', js: 'j
 
 function esbuildOptions(file) {
   const ext = path.extname(file).replace('.', '');
+  const { experimentalDecorators, useDefineForClassFields } = typescriptOptions();
   return {
     loader: LOADERS[ext] ?? 'js',
     format: 'esm',
@@ -184,19 +195,30 @@ function esbuildOptions(file) {
     jsx: 'automatic',
     sourcefile: file,
     sourcemap: 'inline',
+    tsconfigRaw: { compilerOptions: { experimentalDecorators, useDefineForClassFields } },
   };
 }
 
 const USES_PATHS = /\b__(?:dirname|filename)\b/;
 const DECLARES_PATHS = /\b(?:const|let|var|function)\s+__(?:dirname|filename)\b/;
+const USES_REQUIRE = /(?<![.$\w])require\s*(?:\(|\.)/;
+const DECLARES_REQUIRE = /\b(?:const|let|var|function|import)\s+(?:\{[^}]*\b)?require\b/;
 
-// Vite gives a test file the CommonJS __dirname and __filename, which an ES module lacks. Prepended
+// Vitest gives a test file the CommonJS __dirname, __filename and require(), which an ES module lacks. Prepended
 // on the first line, so the source map's lines still match.
 function withPaths(code) {
-  if (code === null || !USES_PATHS.test(code) || DECLARES_PATHS.test(code)) {
+  if (code === null) {
     return code;
   }
-  return `const __dirname = import.meta.dirname, __filename = import.meta.filename;${code}`;
+  const paths = USES_PATHS.test(code) && !DECLARES_PATHS.test(code);
+  const require = USES_REQUIRE.test(code) && !DECLARES_REQUIRE.test(code);
+  const prelude = [
+    paths ? 'const __dirname = import.meta.dirname, __filename = import.meta.filename;' : '',
+    require
+      ? 'import { createRequire as __vyntraCreateRequire } from "node:module"; const require = __vyntraCreateRequire(import.meta.url);'
+      : '',
+  ].join('');
+  return `${prelude}${code}`;
 }
 
 // The source with JSX (and any types) compiled away, or null when the project has no transformer.
@@ -218,7 +240,14 @@ function compile(rawSource, file) {
     }).code;
   }
   return transformer.transpileModule(source, {
-    compilerOptions: { jsx: transformer.JsxEmit.ReactJSX, target: 'ESNext', module: 'ESNext' },
+    compilerOptions: {
+      ...typescriptOptions(),
+      jsx: transformer.JsxEmit.ReactJSX,
+      target: 'ESNext',
+      module: 'ESNext',
+      inlineSourceMap: true,
+      inlineSources: true,
+    },
     fileName: file,
   }).outputText;
 }
@@ -228,13 +257,16 @@ function compile(rawSource, file) {
 // keyed by the source and what compiles it. A file with import.meta.glob depends on which files exist too,
 // so it is only kept in memory.
 const compiled = new Map();
+// Changes when what vyntra adds to the compiled code (withPaths) does, so older entries are not reused.
+const OUTPUT_VERSION = 2;
 
 function compiledKey(source, file) {
   const { name, module: transformer } = findTransformer();
   const plugins = pluginNames().join(',');
+  const options = JSON.stringify(typescriptOptions());
   return crypto
     .createHash('sha1')
-    .update(`${file}\0${name}@${transformer?.version ?? ''}\0${plugins}\0${source}`)
+    .update(`${OUTPUT_VERSION}\0${file}\0${name}@${transformer?.version ?? ''}\0${plugins}\0${options}\0${source}`)
     .digest('hex');
 }
 
@@ -246,12 +278,23 @@ function readCompiled(key) {
   }
 }
 
+// Written aside and renamed into place: with an empty cache every worker compiles the same modules at once, and one
+// reading a file another is still writing would run half of it ("Unexpected end of input").
 function writeCompiled(key, code) {
+  const file = path.join(compiledDir, `${key}.js`);
+  const partial = `${file}.${process.pid}-${threadId}.tmp`;
   try {
     fs.mkdirSync(compiledDir, { recursive: true });
-    fs.writeFileSync(path.join(compiledDir, `${key}.js`), code);
+    fs.writeFileSync(partial, code);
+    fs.renameSync(partial, file);
   } catch {
-    // A cache that can not be written only costs the next run the compile.
+    // Another worker put it there first (Windows will not replace a file being read), or the cache can not be
+    // written: either way this compile is not lost, only not kept.
+    try {
+      fs.rmSync(partial, { force: true });
+    } catch {
+      // Left for the next run to overwrite.
+    }
   }
 }
 
@@ -260,11 +303,13 @@ function transform(rawSource, file) {
   if (kept?.source === rawSource) {
     return kept.code;
   }
-  const onDisk = compiledDir && !rawSource.includes('import.meta.glob');
-  const key = onDisk ? compiledKey(rawSource, file) : null;
+  // Which imported names are types depends on other files: the compiled code is kept for the source with them marked.
+  const source = TS.has(path.extname(file)) ? markTypeImports(rawSource, file) : rawSource;
+  const onDisk = compiledDir && !source.includes('import.meta.glob');
+  const key = onDisk ? compiledKey(source, file) : null;
   let code = key ? readCompiled(key) : null;
   if (code === null) {
-    code = withPaths(compile(rawSource, file));
+    code = withPaths(compile(source, file));
     if (key && code !== null) {
       writeCompiled(key, code);
     }

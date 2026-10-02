@@ -13,6 +13,7 @@ export const {
   onTestFailed,
   expect,
   vi,
+  vitest,
   jest,
   installGlobals,
 } = vyntra;

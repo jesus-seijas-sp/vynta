@@ -114,3 +114,36 @@ describe('pools', () => {
     expect(statuses['process.send exists']).toBe('passed');
   });
 });
+
+describe('signals', () => {
+  it("gives a signal a file sends to its own process to the file's listener, not to the whole run", () => {
+    const { statuses } = runFixture('process');
+    expect(statuses['a signal sent to the own process reaches its listener']).toBe('passed');
+  });
+});
+
+describe('typescript projects', () => {
+  const { statuses } = runFixture('typescript');
+
+  it('resolves an import of ./lib.js to lib.ts', () => {
+    expect(statuses['typescript > imports ./lib.js from lib.ts, as TypeScript projects write it']).toBe('passed');
+  });
+
+  it('imports names of a CommonJS package that are reserved words in a declaration', () => {
+    expect(statuses['typescript > imports names of a CommonJS package that are reserved words']).toBe('passed');
+  });
+});
+
+describe('vitest config', () => {
+  const { statuses } = runFixture('vitest-config');
+
+  it('is read when there is no vyntra config: include, setup files, env and aliases', () => {
+    expect(statuses['vitest config > runs the files its include names']).toBe('passed');
+    expect(statuses['vitest config > resolves test.alias and resolve.alias']).toBe('passed');
+    expect(statuses['vitest config > runs its setup files and sets its env']).toBe('passed');
+  });
+
+  it('reaches the workers', () => {
+    expect(statuses['has the aliases and env of the config in a worker too']).toBe('passed');
+  });
+});

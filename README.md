@@ -53,7 +53,7 @@ Where the time goes, and what vyntra does instead:
 | Module mocks | `vi.mock`/`jest.mock` hoisted in CommonJS and ES modules, factories (async in ESM, with `importOriginal`), automock, `__mocks__` manual mocks, virtual modules, `vi.hoisted`, `doMock`, `unmock`, `requireActual`, `importActual`, `requireMock`, `importMock`, `isolateModules`, `resetModules`                                                     |
 | Fake timers  | `useFakeTimers` (timeouts, intervals, immediates, `Date`, `performance.now`), `advanceTimersByTime(Async)`, `runAllTimers(Async)`, `runOnlyPendingTimers(Async)`, `advanceTimersToNextTimer`, `setSystemTime`, `getTimerCount`                                                                                                                       |
 | Files        | CommonJS, ES modules, TypeScript (`.ts`/`.mts`/`.cts`, Node.js type stripping), setup files                                                                                                                                                                                                                                                          |
-| Config       | `vyntra.config.js`, `"vyntra"` in package.json, or the project's Jest config (`jest.config.*` / `"jest"`)                                                                                                                                                                                                                                              |
+| Config       | `vyntra.config.js`, `"vyntra"` in package.json, the project's Vitest config (`vitest.config.*`, or `vite.config.*` with `test`) or Jest config (`jest.config.*` / `"jest"`)                                                                                                                                                                                                                                              |
 | Coverage     | Text table and `lcov.info` like Jest, `collectCoverageFrom`, `coverageThreshold`                                                                                                                                                                                                                                                                     |
 
 Code that needs a process of its own (`process.chdir`, native addons that are not thread safe) runs with
@@ -66,7 +66,7 @@ coverage of files no test loads.
 
 ```
 -t, --testNamePattern <regex>  Run only the tests whose full name matches
--c, --config <file>            Config file (default: vyntra.config.js, or the Jest config)
+-c, --config <file>            Config file (default: vyntra.config.js, or the Vitest or Jest config)
 -r, --root <dir>               Project root (default: current directory)
 -w, --maxWorkers <n|n%>        Worker threads (default: from the last run)
 -i, --runInBand                Run every file in the main thread

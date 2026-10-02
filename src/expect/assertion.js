@@ -1,6 +1,7 @@
 const { colors: c } = require('../colors');
 const state = require('../state');
 const { AssertionError } = require('./assertion-error');
+const { ChaiAssertion } = require('./chai');
 const { getContext, matcherHint, printReceived } = require('./context');
 
 const isThenable = (value) => typeof value?.then === 'function';
@@ -135,13 +136,22 @@ function createMethod(name, matcher) {
 // adding 50 properties one by one would take 300 times longer.
 let createAssertion;
 
+// Chai's assertions (vitest's expect is chai's): expect(x).to.be.true, expect(list).includes(item). Matchers of the
+// same name, added with expect.extend, come after and win.
+const CHAI = [
+  'get to() { return new C(this.actual, this.isNot); }',
+  'include(value) { return new C(this.actual, this.isNot).include(value); }',
+  'includes(value) { return new C(this.actual, this.isNot).include(value); }',
+].join(', ');
+
 function compile() {
   const names = [...methods.keys()];
   const fields = names.map((name, i) => `${JSON.stringify(name)}: M[${i}]`).join(', ');
   // eslint-disable-next-line no-new-func -- the fastest way to build objects with these properties, see above
   const factory = new Function(
     'M',
-    `const one = (actual, isNot, promise, message, soft) => ({ actual, isNot, promise, message, soft, not: undefined, ${fields} });
+    'C',
+    `const one = (actual, isNot, promise, message, soft) => ({ actual, isNot, promise, message, soft, not: undefined, ${CHAI}, ${fields} });
     return (actual, message, soft) => {
       const assertion = one(actual, false, '', message, soft);
       assertion.not = one(actual, true, '', message, soft);
@@ -154,7 +164,7 @@ function compile() {
       return assertion;
     };`
   );
-  createAssertion = factory([...methods.values()]);
+  createAssertion = factory([...methods.values()], ChaiAssertion);
 }
 
 function defineMatchers(matchers) {

@@ -5,7 +5,14 @@ const { pathToFileURL, fileURLToPath } = require('node:url');
 const state = require('./state');
 const { isSpyable, makeSpyable, markSpyable } = require('./modules/spyable');
 const { installCjsLoader } = require('./cjs-loader');
-const { configure: configureResolution, mapToFile, resolveFile, parentDir } = require('./resolve-paths');
+const {
+  configure: configureResolution,
+  mapToFile,
+  resolveAlias,
+  resolveFile,
+  sourceFile,
+  parentDir,
+} = require('./resolve-paths');
 const {
   configure: configureTransform,
   needsTransform,
@@ -58,9 +65,10 @@ function hookCjs() {
       return ENTRY_CJS;
     }
     const from = parent?.filename ? path.dirname(parent.filename) : undefined;
-    const mapped = mapToFile(request, from ?? process.cwd());
+    const target = resolveAlias(request, from ?? process.cwd()) ?? request;
+    const mapped = mapToFile(target, from ?? process.cwd());
     try {
-      return resolveFilename.call(this, mapped ?? request, parent, ...rest);
+      return resolveFilename.call(this, mapped ?? target, parent, ...rest);
     } catch (error) {
       // CommonJS already tries its own extensions; this adds the ones a bundler
       // would, which is how a TypeScript file reached from JavaScript is found.
@@ -111,11 +119,13 @@ function commonJsInterop(file) {
     `const exported = createRequire(${JSON.stringify(file)})(${JSON.stringify(file)});`,
     // A module compiled from ESM marks itself __esModule and keeps its default export on `.default`.
     `export default exported?.__esModule && 'default' in exported ? exported.default : exported;`,
-    ...names.map((name) => `export const ${name} = exported[${JSON.stringify(name)}];`),
+    // Through an export list, which takes any name: express exports `static`, which a declaration can not be named.
+    ...names.map((name, i) => `const e${i} = exported[${JSON.stringify(name)}];`),
+    names.length > 0 ? `export { ${names.map((name, i) => `e${i} as ${name}`).join(', ')} };` : '',
   ].join('\n');
 }
 
-const bareResolutions = new Map();
+const resolutions = new Map();
 
 function hookEsm(config) {
   if (hooked.esm || typeof Module.registerHooks !== 'function') {
@@ -132,13 +142,15 @@ function hookEsm(config) {
         return { url, shortCircuit: true };
       }
       const from = parentDir(context.parentURL);
-      const mapped = mapToFile(specifier, from);
-      const request = mapped ? pathToFileURL(mapped).href : specifier;
-      // Where a package name leads from a directory does not change during a run, and Node looks it up
-      // again (package.json exports, file probes) for every test file that imports it.
-      const bare = !/^(?:[./]|file:|node:|data:)/.test(request);
-      const key = bare ? `${request}\0${from}\0${context.conditions.join(',')}` : null;
-      let result = key ? bareResolutions.get(key) : undefined;
+      const target = resolveAlias(specifier, from) ?? specifier;
+      const mapped = path.isAbsolute(target) ? target : (mapToFile(target, from) ?? sourceFile(target, from));
+      const request = mapped ? pathToFileURL(mapped).href : target;
+      // Where a specifier leads from a directory does not change during a run, and Node resolves it again (file
+      // probes, package.json exports and scope) for every test file, which imports the project afresh. Specifiers
+      // with a query (a mock's real module, ?raw) are left to Node.
+      const cacheable = !/^(?:node:|data:)/.test(request) && !/[?#]/.test(request);
+      const key = cacheable ? `${request}\0${from}\0${context.conditions.join(',')}` : null;
+      let result = key ? resolutions.get(key) : undefined;
       if (result) {
         const url = isolate ? isolatedUrl(result.url, context.conditions) : result.url;
         return { ...result, url, shortCircuit: true };
@@ -146,7 +158,7 @@ function hookEsm(config) {
       try {
         result = nextResolve(request, context);
         if (key) {
-          bareResolutions.set(key, result);
+          resolutions.set(key, result);
         }
       } catch (error) {
         // Node names no file for "./Language" or "../lib/util"; a bundler would.

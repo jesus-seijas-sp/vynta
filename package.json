@@ -1,6 +1,6 @@
 {
   "name": "vyntra",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A very fast, zero-dependency test runner with a Jest/Vitest compatible API",
   "homepage": "https://github.com/jesus-seijas-sp/vyntra#readme",
   "repository": {

@@ -1,9 +1,13 @@
+const path = require('node:path');
 const { formatTitle, normalizeTable } = require('../src/collect/each');
 const { parseCli } = require('../src/cli/args');
 const { Reporter } = require('../src/cli/reporter');
 const { globToRegExp } = require('../src/cli/glob');
 const { diffLines } = require('../src/expect/diff');
 const { format } = require('../src/expect/format');
+const { configure: configureResolution } = require('../src/resolve-paths');
+const { markTypeImports } = require('../src/type-imports');
+const { fromVitestConfig } = require('../src/cli/vitest-config');
 
 describe('each titles', () => {
   // As it.each(rows)(name).
@@ -141,5 +145,69 @@ describe('console output of a file', () => {
   it("is only printed for failing tests with silent: 'passed-only', as in vitest", () => {
     expect(printed('passed-only')).not.toContain('FROM-PASSING');
     expect(printed('passed-only')).toContain('FROM-FAILING');
+  });
+});
+
+describe('markTypeImports', () => {
+  const root = path.join(__dirname, 'fixtures', 'typescript');
+  const file = path.join(root, 'imports.test.ts');
+  configureResolution({ rootDir: root, moduleFileExtensions: ['js', 'ts'] });
+
+  it('marks the names a project module only declares as types', () => {
+    expect(markTypeImports("import { area, Options } from './lib.js';", file)).toBe(
+      "import { area, type Options } from './lib.js';"
+    );
+  });
+
+  it('leaves values, packages and names it does not know alone', () => {
+    const source = "import { area } from './lib.js';\nimport { plain } from 'cjs-reserved';";
+    expect(markTypeImports(source, file)).toBe(source);
+  });
+});
+
+describe('fromVitestConfig', () => {
+  const root = path.resolve('/project');
+
+  it('takes the options vitest names differently', () => {
+    const config = fromVitestConfig(
+      {
+        test: {
+          pool: 'vmForks',
+          mockReset: true,
+          sequence: { hooks: 'list' },
+          setupFiles: './setup.ts',
+          coverage: {
+            enabled: true,
+            reporter: ['text', ['lcov', {}]],
+            reportsDirectory: 'cov',
+            include: ['src/**'],
+            exclude: ['src/gen/**'],
+            thresholds: { lines: 80, branches: 70 },
+          },
+        },
+        oxc: { decorator: { legacy: true, emitDecoratorMetadata: true } },
+      },
+      root
+    );
+    expect(config).toEqual({
+      pool: 'forks',
+      resetMocks: true,
+      hookOrder: 'list',
+      setupFiles: [path.join(root, 'setup.ts')],
+      coverage: true,
+      coverageReporters: ['text', 'lcov'],
+      coverageDirectory: 'cov',
+      collectCoverageFrom: ['src/**', '!src/gen/**'],
+      coverageThreshold: { global: { lines: 80, branches: 70 } },
+      compilerOptions: { experimentalDecorators: true, emitDecoratorMetadata: true },
+    });
+  });
+
+  it('resolves relative alias replacements from the root and keeps package names', () => {
+    const { alias } = fromVitestConfig({ test: { alias: { '@app': './src', react: 'preact/compat' } } }, root);
+    expect(alias).toEqual([
+      { find: '@app', replacement: path.join(root, 'src') },
+      { find: 'react', replacement: 'preact/compat' },
+    ]);
   });
 });

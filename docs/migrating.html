@@ -140,8 +140,9 @@
 
         <h3 id="vitest-config">Vitest options</h3>
         <p>
-          vyntra does not read <code>vitest.config.ts</code>, as that needs Vite. Move the test options to
-          <code>vyntra.config.js</code>; most have the same name:
+          vyntra reads your <code>vitest.config.ts</code> (or a <code>vite.config.*</code> with a <code>test</code> section)
+          without loading Vite: <code>defineConfig</code>, <code>mergeConfig</code> and <code>configDefaults</code> from
+          <code>vitest/config</code> work even once Vitest is uninstalled. Of its options it takes:
         </p>
         <div class="table-wrap">
           <table>
@@ -155,7 +156,10 @@
               <tr><td><code>globals</code></td><td><span class="check">✓</span> Always on; imports work as well</td></tr>
               <tr><td><code>coverage.include</code>, <code>coverage.thresholds</code></td><td><span class="check">✓</span> <code>collectCoverageFrom</code>, <code>coverageThreshold</code></td></tr>
               <tr><td><code>environment: 'jsdom'</code>, <code>'happy-dom'</code></td><td><span class="cross">✗</span> Not yet</td></tr>
-              <tr><td>Vite plugins, <code>resolve.alias</code></td><td><span class="cross">✗</span> No Vite: use <code>imports</code> of <code>package.json</code></td></tr>
+              <tr><td><code>test.alias</code>, <code>resolve.alias</code>, <code>test.env</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td>Oxc's <code>decorator</code> and esbuild's <code>tsconfigRaw</code> options</td><td><span class="check">✓</span> For the TypeScript transform</td></tr>
+              <tr><td>Vite plugins</td><td><span class="check">✓</span> Their synchronous <code>transform</code> hooks; no <code>resolveId</code></td></tr>
+              <tr><td><code>globalSetup</code>, <code>projects</code></td><td><span class="cross">✗</span> Not supported (vyntra warns)</td></tr>
               <tr><td>Browser mode, <code>typecheck</code>, <code>bench</code>, in-source tests</td><td><span class="cross">✗</span> Not supported</td></tr>
             </tbody>
           </table>

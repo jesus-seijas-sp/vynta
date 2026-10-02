@@ -1,7 +1,9 @@
 const fs = require('node:fs');
+const Module = require('node:module');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { globToRegExp } = require('./glob');
+const { VITEST_CONFIG_FILES, isVitestConfig, fromVitestConfig } = require('./vitest-config');
 
 const DEFAULTS = {
   roots: ['.'],
@@ -68,14 +70,37 @@ const DEFAULTS = {
 const CONFIG_FILES = ['vyntra.config.js', 'vyntra.config.cjs', 'vyntra.config.mjs'];
 const JEST_FILES = ['jest.config.js', 'jest.config.cjs', 'jest.config.mjs', 'jest.config.json'];
 
+const VITEST_CONFIG_STUB = pathToFileURL(path.join(__dirname, 'vitest-config-stub.mjs')).href;
+
+// A vitest config imports defineConfig from 'vitest/config', which loads all of Vite: while the config loads, it gets
+// vyntra's stand-in, which also lets it load where vitest is no longer installed.
+async function importWithStubs(file) {
+  const hooks = Module.registerHooks?.({
+    resolve: (specifier, context, nextResolve) =>
+      specifier === 'vitest/config' ? { url: VITEST_CONFIG_STUB, shortCircuit: true } : nextResolve(specifier, context),
+  });
+  try {
+    return await import(pathToFileURL(file).href);
+  } finally {
+    hooks?.deregister();
+  }
+}
+
 async function importConfig(file) {
   if (file.endsWith('.json')) {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   }
-  // eslint-disable-next-line global-require -- loading the config file is the point
-  const loaded = file.endsWith('.mjs') ? await import(pathToFileURL(file).href) : require(file);
+  // Imported whatever its kind: a CommonJS config comes as the default export, and TypeScript is stripped by Node.
+  const loaded = await importWithStubs(file);
   const config = loaded?.default ?? loaded;
-  return typeof config === 'function' ? config() : config;
+  // A config written as a function, as defineConfig allows, is called with what vitest passes it.
+  return typeof config === 'function' ? config({ command: 'serve', mode: 'test', isSsrBuild: false }) : config;
+}
+
+// A config with a `test` section is a vitest (or Vite) config, whatever file it comes from.
+async function importAnyConfig(file, rootDir) {
+  const config = await importConfig(file);
+  return isVitestConfig(config) ? fromVitestConfig(config, rootDir) : config;
 }
 
 function readPackageJson(rootDir) {
@@ -151,14 +176,32 @@ function configFileOf(rootDir, explicit) {
   return CONFIG_FILES.map((name) => path.join(rootDir, name)).find((file) => fs.existsSync(file)) ?? null;
 }
 
+// The vitest config of the project: a vitest.config, or a vite.config with a `test` section. Returns
+// { file, config } or null.
+async function findVitestConfig(rootDir) {
+  const files = VITEST_CONFIG_FILES.map((name) => path.join(rootDir, name)).filter((file) => fs.existsSync(file));
+  for (let i = 0; i < files.length; i += 1) {
+    // eslint-disable-next-line no-await-in-loop -- the first one that is a vitest config wins
+    const config = await importConfig(files[i]);
+    if (isVitestConfig(config)) {
+      return { file: files[i], config: fromVitestConfig(config, rootDir) };
+    }
+  }
+  return null;
+}
+
 async function findConfig(rootDir, explicit) {
   const own = configFileOf(rootDir, explicit);
   if (own) {
-    return importConfig(own);
+    return importAnyConfig(own, rootDir);
   }
   const pkg = readPackageJson(rootDir);
   if (pkg.vyntra) {
     return pkg.vyntra;
+  }
+  const vitest = await findVitestConfig(rootDir);
+  if (vitest) {
+    return { ...vitest.config, configFile: vitest.file };
   }
   const jestFile = JEST_FILES.map((name) => path.join(rootDir, name)).find((file) => fs.existsSync(file));
   if (jestFile) {
@@ -183,6 +226,19 @@ function coverageFilter(globs, rootDir) {
   };
 }
 
+// A setup file is a path, or a package as vitest also takes them (setupFiles: ['reflect-metadata']).
+function resolveSetupFile(file, rootDir) {
+  const local = path.resolve(rootDir, file);
+  if (file.startsWith('.') || path.isAbsolute(file) || fs.existsSync(local)) {
+    return local;
+  }
+  try {
+    return Module.createRequire(path.join(rootDir, 'package.json')).resolve(file);
+  } catch {
+    return local;
+  }
+}
+
 async function loadConfig(cliOptions) {
   const rootDir = path.resolve(cliOptions.rootDir ?? process.cwd());
   const fileConfig = await findConfig(rootDir, cliOptions.config);
@@ -191,10 +247,18 @@ async function loadConfig(cliOptions) {
     ...fileConfig,
     ...cliOptions,
     rootDir,
-    configFile: configFileOf(rootDir, cliOptions.config),
+    configFile: configFileOf(rootDir, cliOptions.config) ?? fileConfig.configFile ?? null,
   };
-  config.setupFiles = config.setupFiles.map((file) => path.resolve(rootDir, file));
+  config.setupFiles = config.setupFiles.map((file) => resolveSetupFile(file, rootDir));
   config.coverageInclude = coverageFilter(config.collectCoverageFrom, rootDir);
+  // Workers load the plugins from the config file, which costs an import: only when it has some that transform.
+  config.transformPlugins = [config.plugins ?? []]
+    .flat(Infinity)
+    .some((plugin) => typeof plugin?.transform === 'function');
+  // vitest's test.env: the variables the tests see, set before any worker starts so they all inherit them.
+  Object.entries(config.env ?? {}).forEach(([name, value]) => {
+    process.env[name] = String(value);
+  });
   return config;
 }
 

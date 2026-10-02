@@ -16,7 +16,8 @@ const context = {
 
 async function loadPlugins(config) {
   let list = config.plugins;
-  if (!list?.some?.((plugin) => typeof plugin?.transform === 'function') && config.configFile) {
+  const missing = !list?.some?.((plugin) => typeof plugin?.transform === 'function');
+  if (missing && config.configFile && config.transformPlugins !== false) {
     // eslint-disable-next-line global-require -- the config is only reloaded where it lost its functions
     const { importConfig } = require('./cli/config');
     list = (await importConfig(config.configFile))?.plugins;

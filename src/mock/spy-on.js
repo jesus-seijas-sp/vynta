@@ -42,6 +42,18 @@ function copyStatics(spy, original) {
 
 function spyOnAccessor(object, key, descriptor, isOwn, accessType) {
   const accessor = descriptor[accessType];
+  // A plain value spied as a getter or setter (a class field mocked through its getter): vitest makes it an
+  // accessor with no implementation until the test gives one; Jest throws, which no test can be counting on.
+  if (accessor === undefined && 'value' in descriptor) {
+    const spy = fn().mockName(String(key));
+    Object.defineProperty(object, key, {
+      configurable: true,
+      enumerable: descriptor.enumerable,
+      [accessType]: spy,
+    });
+    registerSpy(spy, undefined, () => restoreProperty(object, key, descriptor, isOwn));
+    return spy;
+  }
   if (typeof accessor !== 'function') {
     throw new Error(`${String(key)} property does not have access type ${accessType}`);
   }

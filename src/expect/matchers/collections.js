@@ -81,12 +81,18 @@ function parsePath(path) {
   return parts;
 }
 
+// Every object inherits these: they count only as its own (as in vitest), or no object could be expected not to
+// have them, which is what tests of prototype pollution expect.
+const OWN_ONLY = new Set(['constructor', '__proto__', 'prototype']);
+
+const hasPart = (value, part) => (OWN_ONLY.has(part) ? Object.hasOwn(Object(value), part) : part in Object(value));
+
 // Follows a path; returns { found, value, last } where last is the deepest object reached.
 function followPath(obj, parts) {
   let value = obj;
   let last = obj;
   for (let i = 0; i < parts.length; i += 1) {
-    if (value === null || value === undefined || !(parts[i] in Object(value))) {
+    if (value === null || value === undefined || !hasPart(value, parts[i])) {
       return { found: false, value: undefined, last };
     }
     last = value;

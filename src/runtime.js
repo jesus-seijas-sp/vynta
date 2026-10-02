@@ -1,5 +1,7 @@
+const os = require('node:os');
 const Module = require('node:module');
 const util = require('node:util');
+const { isMainThread } = require('node:worker_threads');
 const state = require('./state');
 const { realTimers } = require('./timers/real-timers');
 const { setColors } = require('./colors');
@@ -49,6 +51,33 @@ function shimProcessSend() {
   }
   process.send = (message, ...rest) => {
     rest.find((arg) => typeof arg === 'function')?.(null);
+    return true;
+  };
+}
+
+function signalName(number) {
+  return Object.keys(os.constants.signals).find((name) => os.constants.signals[name] === number);
+}
+
+// A test that signals its own process (Nest's shutdown hooks: process.kill(process.pid, 'SIGTERM')) expects what
+// POSIX does: the process's listeners get the signal, or, with none, the process ends. On Windows the process ends
+// whatever listens, and for a worker thread the process is the whole run. So the signal goes to the listeners, and
+// without them only the worker ends, as a Jest or vitest worker process would.
+function shimProcessKill() {
+  const kill = process.kill.bind(process);
+  process.kill = function vyntraKill(pid, signal = 'SIGTERM') {
+    const name = typeof signal === 'number' ? signalName(signal) : signal;
+    if (Number(pid) !== process.pid || !name) {
+      return kill(pid, signal);
+    }
+    if (process.listenerCount(name) > 0) {
+      realTimers.setImmediate(() => process.emit(name, name));
+      return true;
+    }
+    if (isMainThread) {
+      return kill(pid, signal);
+    }
+    process.exit(128 + os.constants.signals[name]);
     return true;
   };
 }
@@ -114,6 +143,7 @@ async function createRuntime(config) {
   captureConsole(config.silent);
   catchUncaught();
   shimProcessSend();
+  shimProcessKill();
   await loadPlugins(config);
   const pristine = globalSnapshot.snapshot();
   installEnvironment(config);

@@ -8,6 +8,7 @@ const { fileURLToPath } = require('node:url');
 // run only after Node's own resolution has failed, so an import that already works is untouched.
 
 let mappings = [];
+let aliases = [];
 let extensions = [];
 let rootDir = process.cwd();
 const resolved = new Map();
@@ -19,7 +20,26 @@ function configure(config = {}) {
     pattern: new RegExp(pattern),
     targets: Array.isArray(target) ? target : [target],
   }));
+  aliases = config.alias ?? [];
   resolved.clear();
+}
+
+// Vite's alias ([{ find, replacement }], from a vitest config): a string matches the specifier or its subpaths
+// ('@app' matches '@app' and '@app/x'), a regular expression is replaced as String.replace does. The specifier the
+// first matching alias makes, or null.
+function applyAlias(specifier) {
+  for (let i = 0; i < aliases.length; i += 1) {
+    const { find, replacement } = aliases[i];
+    if (find instanceof RegExp) {
+      find.lastIndex = 0;
+      if (find.test(specifier)) {
+        return specifier.replace(find, replacement);
+      }
+    } else if (specifier === find || specifier.startsWith(`${find}/`)) {
+      return replacement + specifier.slice(find.length);
+    }
+  }
+  return null;
 }
 
 // Jest's moduleNameMapper: the first pattern that matches replaces the specifier, with <rootDir>
@@ -52,9 +72,20 @@ function isFile(candidate) {
   return files.get(candidate);
 }
 
+// TypeScript has an import name the file it compiles to ('./injector.js' for injector.ts): where only the source is
+// there, that is the file meant.
+const SOURCE_OF = { '.js': ['.ts', '.tsx'], '.mjs': ['.mts'], '.cjs': ['.cts'], '.jsx': ['.tsx'] };
+
 function probe(filePath) {
   if (isFile(filePath)) {
     return filePath;
+  }
+  const compiledExt = path.extname(filePath);
+  const source = SOURCE_OF[compiledExt]
+    ?.map((sourceExt) => filePath.slice(0, -compiledExt.length) + sourceExt)
+    .find(isFile);
+  if (source) {
+    return source;
   }
   const withExtension = extensions.map((ext) => filePath + ext).find(isFile);
   return withExtension ?? extensions.map((ext) => path.join(filePath, `index${ext}`)).find(isFile) ?? null;
@@ -184,6 +215,28 @@ function resolveFile(specifier, fromDir) {
   return file;
 }
 
+// Where an alias sends a specifier: the file it names (found as a bundler finds one: extensions, index, .js for
+// .ts), or the specifier it becomes when it names a package; null when no alias matches.
+function resolveAlias(specifier, fromDir) {
+  const aliased = applyAlias(specifier);
+  if (aliased === null || !(path.isAbsolute(aliased) || aliased.startsWith('.'))) {
+    return aliased;
+  }
+  const file = path.resolve(rootDir, aliased);
+  return resolveFile(file, fromDir) ?? file;
+}
+
+// The TypeScript source a relative import names by its compiled file ('./injector.js' for injector.ts), when only the
+// source is there; null otherwise. Asked before Node resolves: Node failing on the missing file first costs a
+// CommonJS resolution of it too, done only to word the error, for every import of every test file.
+function sourceFile(specifier, fromDir) {
+  if (!/^\.\.?\//.test(specifier) || !SOURCE_OF[path.extname(specifier)]) {
+    return null;
+  }
+  const file = path.resolve(fromDir, specifier);
+  return isFile(file) ? null : probe(file);
+}
+
 // The file a mapping rewrites the specifier to, or null when none matches or none exists.
 function mapToFile(specifier, fromDir) {
   const targets = mapSpecifier(specifier);
@@ -204,4 +257,14 @@ function parentDir(parentURL) {
   }
 }
 
-module.exports = { configure, mapSpecifier, mapToFile, resolveFile, resolveImportFile, parentDir };
+module.exports = {
+  configure,
+  applyAlias,
+  resolveAlias,
+  mapSpecifier,
+  mapToFile,
+  resolveFile,
+  resolveImportFile,
+  sourceFile,
+  parentDir,
+};

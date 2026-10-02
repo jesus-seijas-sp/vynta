@@ -2,7 +2,7 @@ const collect = require('./collect/api');
 const { expect } = require('./expect');
 const { vi } = require('./vi');
 
-const api = { ...collect, expect, vi, jest: vi };
+const api = { ...collect, expect, vi, vitest: vi, jest: vi };
 
 const GLOBALS = [
   'describe',
@@ -17,6 +17,7 @@ const GLOBALS = [
   'onTestFailed',
   'expect',
   'vi',
+  'vitest',
   'jest',
 ];
 

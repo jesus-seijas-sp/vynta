@@ -153,3 +153,39 @@ describe('the shape of expect()', () => {
     await expect(Promise.reject(new Error('rejected'))).rejects.toThrow('rejected');
   });
 });
+
+describe('chai assertions', () => {
+  it('reads the chains of chai, which vitest carries', () => {
+    // Chai asserts when the property is read.
+    /* eslint-disable no-unused-expressions */
+    expect(true).to.be.true;
+    expect(false).to.be.false;
+    /* eslint-enable no-unused-expressions */
+    expect(1).to.equal(1);
+    expect(1).to.eq(1);
+    expect(1).to.not.equal(2);
+    expect({ a: [1] }).to.deep.equal({ a: [1] });
+    expect([1, 2]).to.include(2);
+    expect([1, 2]).to.not.include(3);
+    expect([1, 2]).includes(1);
+    expect('abc').to.have.lengthOf(3);
+    expect(() => {
+      throw new TypeError('bad');
+    }).to.throw(TypeError);
+    expect(() => {}).to.not.throw();
+  });
+
+  it('fails as chai would', () => {
+    expect(() => expect(1).to.equal(2)).toThrow('expected 1 to equal 2');
+    expect(() => expect(1).not.to.equal(1)).toThrow('expected 1 not to equal 1');
+    expect(() => expect([1]).to.include(2)).toThrow('expected [1] to include 2');
+  });
+});
+
+describe('toHaveProperty', () => {
+  it('counts constructor, __proto__ and prototype only as own properties, as vitest', () => {
+    expect({}).not.toHaveProperty('constructor');
+    expect({ constructor: 'own' }).toHaveProperty('constructor', 'own');
+    expect(Object.create({ inherited: 1 })).toHaveProperty('inherited');
+  });
+});

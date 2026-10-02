@@ -76,6 +76,24 @@ describe('vi.fn', () => {
 });
 
 describe('spyOn', () => {
+  it('spies on a plain value as a getter, as vitest does, and puts the value back', () => {
+    const client = { producer: null };
+    const spy = vi.spyOn(client, 'producer', 'get').mockReturnValue('mocked');
+    expect(client.producer).toBe('mocked');
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+    expect(Object.getOwnPropertyDescriptor(client, 'producer')).toEqual({
+      value: null,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  });
+
+  it('is also the global vitest, as in vitest with globals', () => {
+    expect(globalThis.vitest).toBe(vi);
+  });
+
   it('calls through and restores', () => {
     const calculator = { add: (a, b) => a + b };
     const spy = vi.spyOn(calculator, 'add');
