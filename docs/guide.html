@@ -57,8 +57,10 @@
         <ul>
           <li><a href="#coverage">Coverage</a></li>
           <li><a href="#isolation">Workers and isolation</a></li>
+          <li><a href="#between-files">Restored between files</a></li>
           <li><a href="#split-files">Splitting long files</a></li>
           <li><a href="#typescript">TypeScript and ES modules</a></li>
+          <li><a href="#imports">What files can import</a></li>
           <li><a href="#speed">Why it is fast</a></li>
           <li><a href="#faq">FAQ</a></li>
           <li><a href="api.html">API reference</a></li>
@@ -534,6 +536,33 @@ src/prices.js   |   <span class="t-warn">56.52</span> |    <span class="t-ok">83
           </li>
         </ul>
 
+        <h3 id="between-files">What is restored between files</h3>
+        <p>
+          Jest gives every test file a process of its own (with its own global object), and Vitest a worker. vyntra runs
+          many files in the same worker, so it puts back what a file changed before the next one starts:
+        </p>
+        <ul>
+          <li><strong><code>process.env</code>:</strong> the variables a file sets, changes or deletes are as they were.</li>
+          <li>
+            <strong>Globals:</strong> what a file adds to the global object is removed, even when it was defined as not
+            configurable (<code>Object.defineProperty(global, 'app', { get })</code>), and what it replaced comes back.
+          </li>
+          <li>
+            <strong>Mocks and modules:</strong> spies are restored and module mocks forgotten. A file that mocked something leaves no module behind
+            that was built with the mocks: the dependencies loaded after its first mock are loaded again for the next file
+            (all of them, when it mocked a builtin such as <code>fs</code>).
+          </li>
+          <li><strong>Timers:</strong> fake timers are uninstalled, and <code>vi.stubGlobal</code> and <code>vi.stubEnv</code> undone.</li>
+        </ul>
+        <p>
+          Some things a process does are kept from ending the worker: <code>process.kill(process.pid, 'SIGTERM')</code>
+          reaches the file's <code>SIGTERM</code> listeners (it ends only that worker when there are none),
+          <code>process.send</code> exists (and does nothing), and child processes started with
+          <code>stdio: [process.stdin, process.stdout, process.stderr]</code> get what a worker thread can give them
+          instead of failing. A promise rejected without a handler that gets one later (a rejection awaited with
+          <code>.rejects</code> after advancing fake timers) is not a failure, as in Jest.
+        </p>
+
         <h3 id="split-files">Splitting long files</h3>
         <p>
           A run is never shorter than its slowest file. When that file's tests do not depend on each other (each one sets
@@ -554,22 +583,96 @@ module.exports = {
         <p>
           vyntra loads files with Node.js, so what Node.js runs, vyntra runs: CommonJS, ES modules (<code>.mjs</code>, or
           <code>"type": "module"</code>), and TypeScript (<code>.ts</code>, <code>.mts</code>, <code>.cts</code>) through
-          the type stripping of Node.js 22.18 and later. There is no build step and no source map to go wrong: errors
-          point at your lines.
+          the type stripping of Node.js 22.18 and later. There is no build step, and errors point at your lines.
+        </p>
+        <p>
+          What Node.js can not run is compiled with what your project already has: JSX, and TypeScript-only syntax
+          (<code>enum</code>, parameter properties, decorators), go through its esbuild, sucrase or TypeScript, and
+          decorator metadata (<code>emitDecoratorMetadata</code> in <code>tsconfig.json</code>) through its TypeScript. A
+          Jest <code>transform</code> in your config compiles the files it matches instead. The output is kept in
+          <code>node_modules/.cache/vyntra</code>.
         </p>
         <div class="callout">
           <p>
-            Type stripping removes types; it does not compile TypeScript-only syntax such as <code>enum</code> or
-            parameter properties. JSX is not supported yet.
+            In compiled files, stack traces and code frames show the lines of the compiled output: source maps are not
+            applied yet. Without a transformer installed, type stripping removes types but does not compile
+            <code>enum</code>, parameter properties or decorators.
           </p>
         </div>
+
+        <h2 id="imports">What files can import</h2>
+        <p>
+          Code written for a bundler (Vite, webpack) imports things Node.js refuses. vyntra accepts them as Vitest and Jest
+          do, so the tests run without changing the code:
+        </p>
+        <ul>
+          <li>
+            <strong>JSON.</strong> <code>import data from './data.json'</code> works without
+            <code>with { type: 'json' }</code>: the default export is the parsed file. <code>require('./data.json')</code>
+            returns the data, as in Node.js. Named imports (<code>import { version } from './package.json'</code>) are not
+            supported.
+          </li>
+          <li>
+            <strong>Stylesheets</strong> (<code>.css</code>, <code>.scss</code>, <code>.sass</code>, <code>.less</code>,
+            <code>.styl</code>, <code>.pcss</code>) are not read. Their default export answers every class name with the
+            name itself, as a CSS module would: <code>styles.button</code> is <code>'button'</code>.
+          </li>
+          <li>
+            <strong>Images, fonts and media</strong> (<code>.svg</code>, <code>.png</code>, <code>.jpg</code>,
+            <code>.gif</code>, <code>.webp</code>, <code>.woff2</code>, <code>.mp4</code>, <code>.pdf</code>,
+            <code>.txt</code>, <code>.md</code>...) export their path as the default, as a bundler exports their URL.
+          </li>
+          <li>
+            <strong><code>import.meta.glob</code></strong>, Vite's: <code>import.meta.glob('./pages/*.ts')</code> becomes an
+            object with a function per matching file that imports it. <code>{ eager: true }</code> gives the modules
+            themselves, <code>{ import: 'default' }</code> one export of each, and <code>{ query: '?raw' }</code> their
+            text. An array of patterns takes the files of all of them; <code>!</code> exclusions are not supported yet.
+          </li>
+          <li>
+            <strong>Imports without an extension</strong> (<code>'./utils'</code>), and of a folder's
+            <code>index</code> file, try the extensions of <code>moduleFileExtensions</code>, in ES modules too.
+          </li>
+          <li>
+            <strong><code>'./file.js'</code> naming a TypeScript file.</strong> When there is no <code>file.js</code>,
+            vyntra loads <code>file.ts</code> (or <code>.tsx</code>; <code>.mjs</code> gives <code>.mts</code> and
+            <code>.cjs</code> <code>.cts</code>), as TypeScript's <code>nodenext</code> resolution expects.
+          </li>
+          <li>
+            <strong>Aliases:</strong> Jest's <code>moduleNameMapper</code>, Vite's <code>resolve.alias</code> (or
+            vyntra's <code>alias</code>), and the <code>imports</code> of <code>package.json</code>, which Node.js
+            resolves.
+          </li>
+          <li>
+            <strong>Named imports from CommonJS packages.</strong> <code>import { join } from 'lodash'</code> gets every
+            export of the package, even those Node.js can not detect in its source.
+          </li>
+          <li>
+            <strong><code>__dirname</code>, <code>__filename</code> and <code>require</code></strong> in the ES modules
+            vyntra compiles (TypeScript with a transformer installed, JSX, files with <code>import.meta.glob</code>), as
+            Vitest gives them. In ES modules that Node.js runs as they are, use <code>import.meta.dirname</code> and
+            <code>import.meta.filename</code>.
+          </li>
+          <li>
+            <strong>Type-only imports.</strong> An import of a name that is only an interface or a type is dropped, as
+            TypeScript drops it, even without <code>import type</code>. Node.js's type stripping alone would keep it and
+            fail with "does not provide an export named".
+          </li>
+          <li>
+            <strong>Yarn Plug'n'Play.</strong> Projects without <code>node_modules</code> run with Yarn's loader:
+            <code>yarn vyntra</code>.
+          </li>
+        </ul>
+        <p>
+          Packages in <code>node_modules</code> are loaded by Node.js as they are: vyntra does not compile them, unless a
+          Jest <code>transform</code> and its <code>transformIgnorePatterns</code> say so.
+        </p>
 
         <h2 id="speed">Why it is fast</h2>
         <p>Measured on real suites, most of a test run is not the tests. vyntra removes what it can of the rest:</p>
         <ul>
           <li><strong>No transform pipeline.</strong> Files are loaded by Node.js as they are, instead of going through Babel or Vite first.</li>
           <li><strong>Warm workers.</strong> Dependencies are loaded once per worker, not once per file.</li>
-          <li><strong>Caches between runs</strong>, in <code>node_modules/.cache/vyntra</code>: the duration of every file, where <code>require()</code> found each dependency (resolving a large dependency tree probes the file system thousands of times), and V8's compiled code.</li>
+          <li><strong>Caches between runs</strong>, in <code>node_modules/.cache/vyntra</code>: the duration of every file, where <code>require()</code> found each dependency (resolving a large dependency tree probes the file system thousands of times), and what was compiled (TypeScript, JSX, your Jest <code>transform</code>). V8's own code cache is off unless <code>compileCache: true</code>: it grew without being read back.</li>
           <li><strong>The slowest file first</strong>, on just enough workers.</li>
           <li><strong>Assertions that cost nothing when they pass.</strong> Messages, diffs and code frames are only built for failures.</li>
         </ul>
@@ -588,8 +691,15 @@ module.exports = {
         </p>
         <h3>What is not supported yet?</h3>
         <p>
-          Watch mode, browser-like environments (<code>jsdom</code>, <code>happy-dom</code>), JSX, type checking,
-          sharding, and coverage of the files no test loads.
+          Watch mode, Jest and Vitest <code>projects</code> in one run, <code>globalSetup</code>, test environments of
+          your own, Babel run without a <code>transform</code>, source maps in stack traces, type checking, sharding, and
+          coverage of the files no test loads. <a href="migrating.html#missing">Migrating</a> has the whole list.
+        </p>
+        <h3>My tests expect <code>NODE_ENV=test</code>.</h3>
+        <p>
+          Jest and Vitest set it when it is not set; vyntra leaves the environment as it is, as some applications do much
+          more work under <code>test</code>. Set it for the run (<code>NODE_ENV=test npx vyntra</code>), or in
+          <code>vyntra.config.js</code>: <code>env: { NODE_ENV: 'test' }</code>.
         </p>
         <h3>Where is the cache, and can I delete it?</h3>
         <p>

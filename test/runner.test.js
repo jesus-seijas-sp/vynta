@@ -122,6 +122,24 @@ describe('signals', () => {
   });
 });
 
+describe('json files', () => {
+  // One worker: the CommonJS test runs after the ES module one, when require() goes through the loader hooks.
+  const { statuses } = runFixture('json', ['--maxWorkers', '1']);
+
+  it('gives module.exports to a require() of CommonJS that an ES module imported', () => {
+    expect(statuses['json > is module.exports for a require of CommonJS an ES module imported']).toBe('passed');
+  });
+
+  it('gives module.exports to a require() after an ES module ran in the worker', () => {
+    expect(statuses['json from commonjs > is the object for a require of a CommonJS test']).toBe('passed');
+  });
+
+  it('gives the default export to imports, with or without { type: json }', () => {
+    expect(statuses['json > is the default export for an import without attributes']).toBe('passed');
+    expect(statuses['json > is the default export for an import with { type: json }']).toBe('passed');
+  });
+});
+
 describe('typescript projects', () => {
   const { statuses } = runFixture('typescript');
 

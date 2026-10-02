@@ -270,6 +270,14 @@ function hookEsm(config) {
         return nextLoad(url, context);
       }
       if (isJson(file)) {
+        // Only an import without attributes gets an ES module of it, as in vitest, which needs no { type: 'json' }.
+        // Everything else is loaded as JSON, which require() takes as module.exports (an ES module of it has none): a
+        // require() (with the condition "require") and a require() in CommonJS that an ES module imported, which
+        // Node loads as an import with { type: 'json' }.
+        const isRequire = context.conditions?.includes('require');
+        if (isRequire || context.importAttributes?.type === 'json') {
+          return { format: 'json', source: fs.readFileSync(file, 'utf8'), shortCircuit: true };
+        }
         return { format: 'module', source: jsonSource(file), shortCircuit: true };
       }
       if (isAsset(file)) {

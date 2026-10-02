@@ -91,15 +91,19 @@
             <thead><tr><th>Jest option</th><th>In vyntra</th></tr></thead>
             <tbody>
               <tr><td><code>testTimeout</code>, <code>maxWorkers</code>, <code>bail</code>, <code>maxConcurrency</code></td><td><span class="check">✓</span> The same</td></tr>
-              <tr><td><code>testMatch</code>, <code>roots</code>, <code>testPathIgnorePatterns</code></td><td><span class="check">✓</span> Which files are tests</td></tr>
+              <tr><td><code>testMatch</code>, <code>roots</code>, <code>testPathIgnorePatterns</code>, <code>modulePathIgnorePatterns</code></td><td><span class="check">✓</span> Which files are tests</td></tr>
+              <tr><td><code>preset</code></td><td><span class="check">✓</span> A path or a package's <code>jest-preset</code>, merged as Jest merges it</td></tr>
               <tr><td><code>setupFiles</code>, <code>setupFilesAfterEnv</code></td><td><span class="check">✓</span> Loaded before every test file</td></tr>
               <tr><td><code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td><td><span class="check">✓</span> The same</td></tr>
               <tr><td><code>collectCoverage</code>, <code>collectCoverageFrom</code>, <code>coverageDirectory</code>, <code>coverageReporters</code>, <code>coverageThreshold</code></td><td><span class="check">✓</span> V8 coverage, text and lcov reports</td></tr>
-              <tr><td><code>testEnvironment: 'node'</code></td><td><span class="check">✓</span> Always</td></tr>
-              <tr><td><code>testEnvironment: 'jsdom'</code></td><td><span class="cross">✗</span> Not yet</td></tr>
-              <tr><td><code>transform</code>, <code>babel.config.js</code></td><td><span class="cross">✗</span> Files are loaded by Node.js, which runs TypeScript and modern JavaScript without them</td></tr>
-              <tr><td><code>moduleNameMapper</code></td><td><span class="cross">✗</span> Not yet: use <code>imports</code> of <code>package.json</code> (<code>#src/*</code>), which Node.js resolves</td></tr>
-              <tr><td><code>globalSetup</code>, <code>globalTeardown</code></td><td><span class="cross">✗</span> Not yet: use <code>beforeAll</code> in a setup file</td></tr>
+              <tr><td><code>testEnvironment: 'node'</code>, <code>'jsdom'</code>, <code>'happy-dom'</code></td><td><span class="check">✓</span> With the jsdom or happy-dom your project has; a file can ask for its own with a <code>@jest-environment</code> comment</td></tr>
+              <tr><td><code>moduleNameMapper</code></td><td><span class="check">✓</span> The same</td></tr>
+              <tr><td><code>transform</code>, <code>transformIgnorePatterns</code></td><td><span class="check">✓</span> Your transformers (<code>babel-jest</code>, <code>ts-jest</code>, <code>@swc/jest</code>, your own) compile the files they match; they must have a synchronous <code>process()</code></td></tr>
+              <tr><td><code>testEnvironment</code> as a module of your own (a class extending <code>jest-environment-jsdom</code>)</td><td><span class="cross">✗</span> Not supported: the tests run in Node's environment, without a warning</td></tr>
+              <tr><td><code>testEnvironmentOptions</code></td><td><span class="cross">✗</span> Not read</td></tr>
+              <tr><td>Babel without a <code>transform</code> (Jest runs <code>babel-jest</code> by itself when it finds a Babel config)</td><td><span class="cross">✗</span> Not run: name <code>babel-jest</code> in <code>transform</code>. Flow, and syntax only Babel knows, do not run otherwise</td></tr>
+              <tr><td><code>globalSetup</code>, <code>globalTeardown</code></td><td><span class="cross">✗</span> Not run, without a warning: use <code>beforeAll</code> in a setup file</td></tr>
+              <tr><td><code>projects</code></td><td><span class="cross">✗</span> Not supported: run vyntra in each project's directory</td></tr>
               <tr><td><code>snapshotSerializers</code></td><td><span class="cross">✗</span> Call <code>expect.addSnapshotSerializer</code> in a setup file</td></tr>
             </tbody>
           </table>
@@ -111,16 +115,30 @@
             <strong>Worker threads, not processes.</strong> Jest runs tests in child processes. vyntra uses threads, which
             start faster; <code>process.send</code> exists in them (and sends nothing), as code under test sometimes calls
             it. For code that needs a whole process (<code>process.chdir</code>, native addons that are not thread safe),
-            use <code>--pool forks</code>.
+            use <code>--pool forks</code>. On Windows, a worker thread that loaded some native addons together (SQLite's
+            and swc's, in Strapi) can crash the whole run when it ends: <code>--pool forks</code> avoids it.
           </li>
           <li>
             <strong>Dependencies are shared by the files of a worker.</strong> Every test file gets fresh copies of your
-            own modules, as in Jest, but the modules of <code>node_modules</code> are loaded once per worker. A test that
-            changes the state of a dependency (a global setting of a library) should undo it.
+            own modules, as in Jest, but the modules of <code>node_modules</code> are loaded once per worker. After a file
+            that mocks modules, the dependencies it loaded once it had mocks are loaded again for the next file (all of
+            them when it mocked a builtin such as <code>fs</code>). A test that changes the state of a dependency loaded
+            before (a global setting of a library) should undo it.
           </li>
           <li>
-            <strong>No Babel.</strong> Syntax only Babel understands (Flow, JSX, decorators, TypeScript <code>enum</code>)
-            does not run.
+            <strong><code>NODE_ENV</code> is left as it is.</strong> Jest sets it to <code>test</code> when it is not set;
+            vyntra does not. Code that behaves differently under <code>test</code> needs <code>NODE_ENV=test</code> in the
+            environment, or <code>env: { NODE_ENV: 'test' }</code> in <code>vyntra.config.js</code>.
+          </li>
+          <li>
+            <strong><code>import()</code> works.</strong> Jest can not run the <code>import()</code> of an ES module from
+            CommonJS without <code>--experimental-vm-modules</code>; vyntra runs it, as Node.js does. A test that expects
+            it to fail sees it succeed.
+          </li>
+          <li>
+            <strong>Errors point at the compiled code.</strong> In a file a transformer compiled (TypeScript with
+            decorators, JSX, your Jest <code>transform</code>), stack traces and code frames show the lines of the output,
+            not of your source: source maps are not applied yet. Files Node.js runs as they are point at your lines.
           </li>
           <li>
             <strong>Mock factories are not checked.</strong> Jest refuses factories that use variables whose names do not
@@ -155,11 +173,12 @@
               <tr><td><code>unstubGlobals</code>, <code>unstubEnvs</code></td><td><span class="check">✓</span> Always, when a file ends</td></tr>
               <tr><td><code>globals</code></td><td><span class="check">✓</span> Always on; imports work as well</td></tr>
               <tr><td><code>coverage.include</code>, <code>coverage.thresholds</code></td><td><span class="check">✓</span> <code>collectCoverageFrom</code>, <code>coverageThreshold</code></td></tr>
-              <tr><td><code>environment: 'jsdom'</code>, <code>'happy-dom'</code></td><td><span class="cross">✗</span> Not yet</td></tr>
+              <tr><td><code>environment: 'jsdom'</code>, <code>'happy-dom'</code>, <code>environmentOptions</code></td><td><span class="check">✓</span> With the jsdom or happy-dom your project has; a file can ask for its own with a <code>@vitest-environment</code> comment</td></tr>
               <tr><td><code>test.alias</code>, <code>resolve.alias</code>, <code>test.env</code></td><td><span class="check">✓</span> The same</td></tr>
               <tr><td>Oxc's <code>decorator</code> and esbuild's <code>tsconfigRaw</code> options</td><td><span class="check">✓</span> For the TypeScript transform</td></tr>
               <tr><td>Vite plugins</td><td><span class="check">✓</span> Their synchronous <code>transform</code> hooks; no <code>resolveId</code></td></tr>
-              <tr><td><code>globalSetup</code>, <code>projects</code></td><td><span class="cross">✗</span> Not supported (vyntra warns)</td></tr>
+              <tr><td><code>globalSetup</code>, <code>projects</code> (and workspaces)</td><td><span class="cross">✗</span> Not supported (vyntra warns): run vyntra in each project's directory, with <code>--config</code></td></tr>
+              <tr><td>Vite plugins' <code>resolveId</code> and <code>load</code>, async <code>transform</code> hooks</td><td><span class="cross">✗</span> Not run: vyntra's module hooks are synchronous</td></tr>
               <tr><td>Browser mode, <code>typecheck</code>, <code>bench</code>, in-source tests</td><td><span class="cross">✗</span> Not supported</td></tr>
             </tbody>
           </table>
@@ -168,24 +187,46 @@
         <h3 id="vitest-differences">Differences with Vitest</h3>
         <ul>
           <li>
-            <strong>The order of <code>afterEach</code> hooks.</strong> vyntra follows Jest: the hooks of a suite run in the
-            order they were declared. Vitest runs them in reverse by default.
+            <strong>The order of <code>afterEach</code> and <code>afterAll</code> hooks</strong> follows the config: in
+            reverse, as Vitest runs them, with a Vitest config or none; in the order they were declared, as Jest runs them,
+            with a Jest config (or <code>hookOrder: 'list'</code>).
           </li>
           <li>
             <strong>Globals are always there.</strong> A test that checks that <code>describe</code> is not a global
             would notice; nothing else does.
           </li>
           <li>
-            <strong>No transform.</strong> What Vite compiles for you (JSX, TypeScript-only syntax, <code>import.meta.env</code>)
-            is not compiled: vyntra runs what Node.js runs.
+            <strong>Only what Node.js can not run is compiled</strong>: JSX and TypeScript-only syntax (decorators,
+            <code>enum</code>), with the esbuild, sucrase or TypeScript your project has. <code>import.meta.env</code> is not
+            defined.
+          </li>
+          <li>
+            <strong>JSON is imported as a default export only.</strong> <code>import data from './data.json'</code> works
+            without <code>with { type: 'json' }</code>, as in Vitest, but the named imports Vite adds
+            (<code>import { version } from './package.json'</code>) do not.
+          </li>
+          <li>
+            <strong><code>NODE_ENV</code> is left as it is.</strong> Vitest sets it to <code>test</code> when it is not
+            set; vyntra does not (see <a href="#jest-differences">the differences with Jest</a>).
           </li>
         </ul>
 
         <h2 id="missing">Not supported yet</h2>
+        <ul>
+          <li><strong>Watch mode.</strong> <code>--watch</code> is accepted and runs the tests once.</li>
+          <li><strong>Projects in one run:</strong> Jest's <code>projects</code>, Vitest's <code>projects</code> and workspaces. Run vyntra in each project's directory.</li>
+          <li><strong><code>globalSetup</code> and <code>globalTeardown</code></strong>, of Jest and Vitest.</li>
+          <li><strong>Test environments of your own</strong> (a Jest <code>testEnvironment</code> module), and <code>testEnvironmentOptions</code>.</li>
+          <li><strong>Babel run implicitly</strong>, as Jest does when it finds a Babel config: name <code>babel-jest</code> in <code>transform</code>.</li>
+          <li><strong>Asynchronous transformers</strong> (a Jest transformer with only <code>processAsync</code>), and Vite plugins' <code>resolveId</code> and <code>load</code> hooks.</li>
+          <li><strong>Source maps</strong> in stack traces and code frames of compiled files.</li>
+          <li><strong>Named imports from JSON</strong> and <code>import.meta.env</code>, which Vite provides.</li>
+          <li><strong>Type checking</strong> (Vitest's <code>typecheck</code>), browser mode, <code>bench</code>, and in-source tests.</li>
+          <li><strong>Sharding</strong> a run over several machines (<code>--shard</code>).</li>
+          <li><strong>The coverage of files no test loads.</strong></li>
+        </ul>
         <p>
-          Watch mode, <code>jsdom</code> and <code>happy-dom</code> environments, JSX, <code>moduleNameMapper</code> and
-          aliases, <code>globalSetup</code>, type checking, sharding, and the coverage of files no test loads. If your
-          suite needs one of them, keep your current runner for now, or run the tests that need it with it.
+          If your suite needs one of them, keep your current runner for now, or run the tests that need it with it.
         </p>
       </article>
     </div>

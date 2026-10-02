@@ -69,8 +69,9 @@
         <h1>API reference</h1>
         <p class="intro">
           Everything vyntra provides. The functions of tests are globals, and can be imported from <code>vyntra</code> (or
-          from <code>vitest</code> and <code>@jest/globals</code>, which resolve to it). <code>jest</code> and
-          <code>vi</code> are the same object.
+          from <code>vitest</code>, <code>vitest/globals</code>, <code>@vitest/expect</code> and
+          <code>@jest/globals</code>, which resolve to it). <code>jest</code>, <code>vi</code> and <code>vitest</code> are
+          the same object.
         </p>
 
         <h2 id="test">test and it</h2>
@@ -179,6 +180,21 @@
         </div>
         <p>Jest's older names work too: <code>toBeCalled</code>, <code>toBeCalledTimes</code>, <code>toBeCalledWith</code>, <code>lastCalledWith</code>, <code>nthCalledWith</code>, <code>toReturn</code>, <code>toReturnTimes</code>, <code>toReturnWith</code>, <code>lastReturnedWith</code>, <code>nthReturnedWith</code>.</p>
 
+        <h3 id="chai">Chai assertions</h3>
+        <p>
+          <code>expect(value).to...</code> takes the Chai style Vitest supports, for tests written with it:
+          <code>to.equal</code>, <code>to.eql</code> (and <code>deep.equal</code>), <code>to.be.true</code> /
+          <code>false</code> / <code>null</code> / <code>undefined</code> / <code>NaN</code> / <code>ok</code> /
+          <code>empty</code>, <code>to.exist</code>, <code>to.include</code> / <code>contain</code>, <code>to.be.a(type)</code>,
+          <code>to.be.instanceOf</code>, <code>to.have.lengthOf</code>, <code>to.have.property(name, value?)</code>,
+          <code>to.have.keys</code>, <code>to.have.members</code>, <code>to.be.above</code> / <code>below</code> /
+          <code>least</code> / <code>most</code> / <code>within</code> / <code>closeTo</code>, <code>to.match</code>,
+          <code>to.be.oneOf</code>, <code>to.throw</code>, and Sinon-Chai's <code>to.have.been.called</code> /
+          <code>calledOnce</code> / <code>calledTimes(n)</code> / <code>calledWith(...)</code>. <code>not</code> negates,
+          and the words in between (<code>be</code>, <code>been</code>, <code>is</code>, <code>that</code>,
+          <code>and</code>, <code>have</code>, <code>with</code>...) read as in Chai.
+        </p>
+
         <h2 id="snapshot-matchers">Snapshot matchers</h2>
         <div class="table-wrap">
           <table>
@@ -191,6 +207,10 @@
             </tbody>
           </table>
         </div>
+        <p>
+          Line endings of the values are written as <code>\n</code>, so a snapshot taken on Windows matches on Linux and the
+          other way around.
+        </p>
 
         <h2 id="asymmetric">Asymmetric matchers</h2>
         <p>Used in expected values: they match any value that passes their check. The ones with <code>expect.not.</code> match the values that do not.</p>
@@ -221,7 +241,7 @@
               <tr><td><code>expect.extend(matchers)</code></td><td>Adds matchers, and their asymmetric forms <code>expect.name()</code>, <code>expect.not.name()</code></td></tr>
               <tr><td><code>expect.addEqualityTesters(testers)</code></td><td>Adds equality rules for your types</td></tr>
               <tr><td><code>expect.addSnapshotSerializer(serializer)</code></td><td>Adds a pretty-format plugin for snapshots</td></tr>
-              <tr><td><code>expect.getState()</code></td><td>The assertion count and the name and path of the current test</td></tr>
+              <tr><td><code>expect.getState()</code></td><td>The assertion count, the name and path of the current test, and <code>snapshotState._updateSnapshot</code> (<code>'all'</code> under <code>-u</code>, <code>'none'</code> under <code>--ci</code>, <code>'new'</code> otherwise), which some tests read to regenerate their fixtures</td></tr>
               <tr><td><code>expect.unreachable(message?)</code></td><td>Fails: for code that should not run</td></tr>
             </tbody>
           </table>
@@ -233,7 +253,7 @@
             <thead><tr><th>Function</th><th>What it does</th></tr></thead>
             <tbody>
               <tr><td><code>vi.fn(implementation?)</code></td><td>A mock function</td></tr>
-              <tr><td><code>vi.spyOn(object, method, accessType?)</code></td><td>Replaces a method (or a <code>'get'</code> / <code>'set'</code> accessor) with a mock that calls the original</td></tr>
+              <tr><td><code>vi.spyOn(object, method, accessType?)</code></td><td>Replaces a method (or a <code>'get'</code> / <code>'set'</code> accessor) with a mock that calls the original. With <code>'get'</code> or <code>'set'</code>, a plain property works too: it becomes an accessor that reads and writes its value</td></tr>
               <tr><td><code>vi.isMockFunction(value)</code></td><td>Whether a value is a mock</td></tr>
               <tr><td><code>vi.mocked(value)</code></td><td>Returns the value (for TypeScript)</td></tr>
               <tr><td><code>vi.clearAllMocks()</code></td><td>Forgets the calls of every mock</td></tr>
@@ -266,10 +286,11 @@
           <table>
             <thead><tr><th>Function</th><th>What it does</th></tr></thead>
             <tbody>
-              <tr><td><code>vi.mock(path, factory?)</code></td><td>Replaces a module for the file; moved to the top of the file. Without a factory: <code>__mocks__</code>, or automock. <code>vi.mock(path, { spy: true })</code> automocks with spies that call the originals</td></tr>
+              <tr><td><code>vi.mock(path, factory?)</code></td><td>Replaces a module for the file; moved to the top of the file. Without a factory: <code>__mocks__</code>, or automock. <code>vi.mock(path, { spy: true })</code> automocks with spies that call the originals. Builtins (<code>vi.mock('fs')</code>, <code>'node:fs'</code>) and packages can be mocked too</td></tr>
               <tr><td><code>jest.mock(path, factory?, { virtual })</code></td><td>The same; <code>virtual</code> for modules that do not exist</td></tr>
               <tr><td><code>vi.doMock(path, factory?)</code></td><td>As <code>vi.mock</code>, from where it is called</td></tr>
               <tr><td><code>vi.unmock(path)</code>, <code>vi.doUnmock(path)</code></td><td>The real module again</td></tr>
+              <tr><td><code>jest.dontMock(path)</code>, <code>jest.deepUnmock(path)</code></td><td>Jest's names for <code>doUnmock</code> and <code>unmock</code></td></tr>
               <tr><td><code>vi.hoisted(fn)</code></td><td>Runs <code>fn</code> before the mocks, for values their factories use</td></tr>
               <tr><td><code>vi.importActual(path)</code>, <code>jest.requireActual(path)</code></td><td>The real module</td></tr>
               <tr><td><code>vi.importMock(path)</code>, <code>jest.requireMock(path)</code></td><td>The mocked module</td></tr>
@@ -344,7 +365,7 @@
         </div>
 
         <h2 id="config">Configuration</h2>
-        <p>In <code>vyntra.config.js</code>, <code>"vyntra"</code> in <code>package.json</code>, or your Jest configuration (see <a href="guide.html#configuration">the guide</a>).</p>
+        <p>In <code>vyntra.config.js</code>, <code>"vyntra"</code> in <code>package.json</code>, or your Vitest or Jest configuration, from which vyntra takes the options it knows (see <a href="guide.html#configuration">the guide</a> and <a href="migrating.html">Migrating</a>).</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
@@ -353,20 +374,35 @@
               <tr><td><code>exclude</code></td><td><code>node_modules</code>, <code>.git</code>, <code>dist</code>, <code>coverage</code></td><td>Globs of the folders and files left out</td></tr>
               <tr><td><code>excludePatterns</code></td><td><code>[]</code></td><td>Regular expressions of paths left out (Jest's <code>testPathIgnorePatterns</code>)</td></tr>
               <tr><td><code>roots</code></td><td><code>['.']</code></td><td>Folders to look for tests in</td></tr>
-              <tr><td><code>setupFiles</code></td><td><code>[]</code></td><td>Files loaded before every test file</td></tr>
+              <tr><td><code>setupFiles</code></td><td><code>[]</code></td><td>Files loaded before every test file: paths from the root, or package names (<code>'reflect-metadata'</code>, <code>'jest-extended/all'</code>)</td></tr>
               <tr><td><code>testTimeout</code></td><td><code>5000</code></td><td>Timeout of tests, in ms</td></tr>
               <tr><td><code>hookTimeout</code></td><td><code>testTimeout</code></td><td>Timeout of hooks</td></tr>
+              <tr><td><code>hookOrder</code></td><td><code>'stack'</code> (<code>'list'</code> from a Jest config)</td><td>The order of a suite's <code>afterEach</code> and <code>afterAll</code> hooks: <code>'stack'</code>, the last registered first, as Vitest; <code>'list'</code>, as declared, as Jest</td></tr>
+              <tr><td><code>unawaitedAssertions</code></td><td><code>'wait'</code> (<code>'settled'</code> from a Jest config)</td><td>Assertions a test does not await (<code>expect(promise).resolves...</code>): <code>'wait'</code> for them within the test's timeout, as Vitest; <code>'settled'</code> counts only those that fail straight away, as Jest drops them</td></tr>
               <tr><td><code>retry</code></td><td><code>0</code></td><td>Retries of failing tests</td></tr>
               <tr><td><code>maxConcurrency</code></td><td><code>5</code></td><td>Concurrent tests running at once</td></tr>
               <tr><td><code>pool</code></td><td><code>'threads'</code></td><td><code>'threads'</code>, <code>'forks'</code> or <code>'inline'</code></td></tr>
               <tr><td><code>maxWorkers</code></td><td>from the last run</td><td>Number of workers, or <code>'50%'</code></td></tr>
               <tr><td><code>isolate</code></td><td><code>true</code></td><td>Fresh project modules for every file</td></tr>
+              <tr><td><code>isolateDependencies</code></td><td><code>[]</code></td><td>Packages loaded fresh for every file too, for those that keep state of their own (MSW's interceptors)</td></tr>
+              <tr><td><code>replaceFailedWorkers</code></td><td><code>true</code></td><td>Replaces a worker whose file failed, so what the failure left broken does not reach the next files</td></tr>
+              <tr><td><code>workerMemoryLimit</code></td><td><code>1024</code></td><td>Megabytes of heap after which a worker is replaced (<code>0</code>: never)</td></tr>
               <tr><td><code>splitFiles</code></td><td><code>false</code></td><td><code>true</code> or globs: files whose tests do not depend on each other, which vyntra may run in parts on several workers when they are the long ones</td></tr>
               <tr><td><code>clearMocks</code>, <code>resetMocks</code>, <code>restoreMocks</code></td><td><code>false</code></td><td>Clears, resets or restores every mock before each test</td></tr>
               <tr><td><code>allowOnly</code></td><td><code>true</code></td><td>Fails files with <code>.only</code> when false</td></tr>
               <tr><td><code>passWithNoTests</code></td><td><code>false</code></td><td>Succeeds with no test files</td></tr>
               <tr><td><code>bail</code></td><td><code>0</code></td><td>Stops after that many failed files</td></tr>
-              <tr><td><code>silent</code></td><td><code>false</code></td><td>Hides console output</td></tr>
+              <tr><td><code>silent</code></td><td><code>false</code></td><td>Hides console output; <code>'passed-only'</code> keeps that of failing tests, as Vitest</td></tr>
+              <tr><td><code>env</code></td><td>none</td><td>Environment variables set for the run, before the workers start (Vitest's <code>test.env</code>). vyntra does not set <code>NODE_ENV</code>: <code>{ NODE_ENV: 'test' }</code> gives what Jest and Vitest set. When the config changes the locale (<code>LC_ALL</code>, <code>LANG</code>, <code>LC_TIME</code>... in <code>env</code>, or in <code>process.env</code> from the config file), vyntra starts again with it, as Node.js only reads it when it starts; <code>TZ</code> needs no restart</td></tr>
+              <tr><td><code>environment</code></td><td><code>'node'</code></td><td><code>'node'</code>, <code>'jsdom'</code> or <code>'happy-dom'</code> (your project's); a file can ask for its own with a <code>@vitest-environment</code> or <code>@jest-environment</code> comment</td></tr>
+              <tr><td><code>environmentUrl</code></td><td>none</td><td>The URL the document reports</td></tr>
+              <tr><td><code>environmentOptions</code></td><td>none</td><td>Options of the document, in Vitest's shape: <code>{ jsdom: { ... }, happyDOM: { settings } }</code></td></tr>
+              <tr><td><code>moduleNameMapper</code></td><td>none</td><td>Jest's: <code>{ '^@app/(.*)$': '&lt;rootDir&gt;/src/$1' }</code></td></tr>
+              <tr><td><code>alias</code></td><td>none</td><td>Vite's: <code>[{ find, replacement }]</code>, a string matching the specifier or its subpaths, a regular expression replaced as <code>String.replace</code> does</td></tr>
+              <tr><td><code>moduleFileExtensions</code></td><td><code>js</code>, <code>mjs</code>, <code>cjs</code>, <code>ts</code>, <code>mts</code>, <code>cts</code>, <code>json</code>, <code>node</code></td><td>Extensions tried for an import that names no file, as a bundler does</td></tr>
+              <tr><td><code>transform</code></td><td>on</td><td><code>false</code> loads files as they are, without compiling JSX or TypeScript-only syntax. A Jest config's <code>transform</code> (your transformers) is read from the Jest config</td></tr>
+              <tr><td><code>plugins</code></td><td><code>[]</code></td><td>Vite plugins whose synchronous <code>transform</code> hooks rewrite your source</td></tr>
+              <tr><td><code>compileCache</code></td><td><code>false</code></td><td>Keeps V8's compiled code on disk, in <code>node_modules/.cache/vyntra</code></td></tr>
               <tr><td><code>reporter</code></td><td><code>'default'</code></td><td><code>'default'</code>, <code>'verbose'</code> or <code>'json'</code></td></tr>
               <tr><td><code>coverage</code></td><td><code>false</code></td><td>Collects coverage (Jest's <code>collectCoverage</code>)</td></tr>
               <tr><td><code>collectCoverageFrom</code></td><td>every loaded file</td><td>Globs of the files to report, <code>!</code> to leave out</td></tr>

@@ -67,21 +67,34 @@ Where the time goes, and what vyntra does instead:
 | Area         | Supported                                                                                                                                                                                                                                                                                                                                            |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tests        | `describe`/`suite`, `it`/`test`, `.skip`, `.only`, `.todo`, `.each` (arrays, objects, tagged templates), `.for`, `.concurrent`, `.sequential`, `.fails`/`.failing`, `.skipIf`, `.runIf`, `test.extend` fixtures, `done` callbacks, test context (`task`, `skip`, `expect`, `signal`, `onTestFinished`, `onTestFailed`), timeouts, `retry`, `repeats` |
-| Hooks        | `beforeAll`, `afterAll`, `beforeEach` (returning a cleanup), `afterEach`, in Jest's order                                                                                                                                                                                                                                                            |
+| Hooks        | `beforeAll`, `afterAll`, `beforeEach` (returning a cleanup), `afterEach`, in Vitest's order, or Jest's with a Jest config |
 | expect       | Every Jest matcher and the Vitest ones (`toBeTypeOf`, `toBeOneOf`, `toSatisfy`, `toHaveBeenCalledOnce`...), `.not`, `.resolves`, `.rejects`, asymmetric matchers, `expect.extend`, `expect.soft`, `expect.poll`, `expect.assertions`, `expect.hasAssertions`, `expect.addEqualityTesters`                                                            |
 | Snapshots    | `toMatchSnapshot` (property matchers, hints), `toMatchInlineSnapshot` (written into the source), `toThrowErrorMatching(Inline)Snapshot`, `-u`, `--ci`, `expect.addSnapshotSerializer`. `.snap` files of Jest and Vitest are read and written in their own format                                                                                     |
-| Mocks        | `vi.fn`/`jest.fn` and every `mock*` method, `spyOn` (methods, getters, setters, classes), `clearAllMocks`, `resetAllMocks`, `restoreAllMocks`, `stubGlobal`, `stubEnv`, `waitFor`, `waitUntil`                                                                                                                                                       |
-| Module mocks | `vi.mock`/`jest.mock` hoisted in CommonJS and ES modules, factories (async in ESM, with `importOriginal`), automock, `__mocks__` manual mocks, virtual modules, `vi.hoisted`, `doMock`, `unmock`, `requireActual`, `importActual`, `requireMock`, `importMock`, `isolateModules`, `resetModules`                                                     |
+| Mocks        | `vi.fn`/`jest.fn` and every `mock*` method, `spyOn` (methods, getters, setters, classes), `clearAllMocks`, `resetAllMocks`, `restoreAllMocks`, `stubGlobal`, `stubEnv`, `waitFor`, `waitUntil`, Chai style (`expect(x).to.equal(1)`, `to.have.been.calledWith`)                                                                                                                                                       |
+| Module mocks | `vi.mock`/`jest.mock` hoisted in CommonJS and ES modules, factories (async in ESM, with `importOriginal`), automock, `__mocks__` manual mocks, virtual modules, `vi.hoisted`, `doMock`, `unmock`, `requireActual`, `importActual`, `requireMock`, `importMock`, `isolateModules`, `resetModules`, `dontMock`, `deepUnmock`, builtins (`vi.mock('fs')`)                                                     |
 | Fake timers  | `useFakeTimers` (timeouts, intervals, immediates, `Date`, `performance.now`), `advanceTimersByTime(Async)`, `runAllTimers(Async)`, `runOnlyPendingTimers(Async)`, `advanceTimersToNextTimer`, `setSystemTime`, `getTimerCount`                                                                                                                       |
-| Files        | CommonJS, ES modules, TypeScript (`.ts`/`.mts`/`.cts`, Node.js type stripping), setup files                                                                                                                                                                                                                                                          |
+| Files        | CommonJS, ES modules, TypeScript (`.ts`/`.mts`/`.cts`, Node.js type stripping), JSX and decorators (with the project's esbuild, sucrase or TypeScript), Jest `transform`, setup files                                                                                                                                                                                                                                                          |
+| Imports      | What bundlers accept: JSON without `with { type: 'json' }`, stylesheets (a CSS-module stub) and images (their path), `import.meta.glob`, imports without extension or of a folder's `index`, `./file.js` naming `file.ts`, `moduleNameMapper` and Vite aliases, named imports of CommonJS packages, `__dirname`/`require` in compiled ES modules, Yarn PnP |
+| Isolation    | Between the files of a worker: project modules, `process.env`, globals (even non-configurable ones), mocks, and the dependencies a mocking file loaded |
 | Config       | `vyntra.config.js`, `"vyntra"` in package.json, the project's Vitest config (`vitest.config.*`, or `vite.config.*` with `test`) or Jest config (`jest.config.*` / `"jest"`)                                                                                                                                                                                                                                              |
 | Coverage     | Text table and `lcov.info` like Jest, `collectCoverageFrom`, `coverageThreshold`                                                                                                                                                                                                                                                                     |
 
-Code that needs a process of its own (`process.chdir`, native addons that are not thread safe) runs with
-`--pool forks`. In worker threads `process.send` exists, as it does in Jest's child processes.
+Environments: Node.js, and `jsdom` or `happy-dom` (the project's own), for the whole run or per file
+(`@vitest-environment` / `@jest-environment` comments).
 
-Not available yet: watch mode, browser-like environments (`jsdom`, `happy-dom`), JSX, type checking, sharding,
-coverage of files no test loads.
+Code that needs a process of its own (`process.chdir`, native addons that are not thread safe) runs with
+`--pool forks`. In worker threads `process.send` exists, as it does in Jest's child processes. On Windows, a worker
+thread that loaded some native addons together (SQLite's and swc's) can crash the run when it ends: use
+`--pool forks` there.
+
+Differences with Jest and Vitest: `NODE_ENV` is left as it is (they set it to `test`; set it yourself, or
+`env: { NODE_ENV: 'test' }` in `vyntra.config.js`), `import()` of ES modules works from CommonJS (Jest can not
+run it without `--experimental-vm-modules`), and stack traces of compiled files show the compiled lines.
+
+Not available yet: watch mode, Jest and Vitest `projects` in one run, `globalSetup`/`globalTeardown`, custom test
+environments (a Jest `testEnvironment` module) and `testEnvironmentOptions`, Babel without a `transform`,
+asynchronous transformers and Vite `resolveId`/`load` hooks, source maps in stack traces, named imports from JSON,
+`import.meta.env`, type checking, sharding, coverage of files no test loads.
 
 ## CLI
 
