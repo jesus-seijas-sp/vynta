@@ -271,6 +271,9 @@ function compiledKey(source, file) {
 }
 
 function readCompiled(key) {
+  if (!compiledDir) {
+    return null;
+  }
   try {
     return fs.readFileSync(path.join(compiledDir, `${key}.js`), 'utf8');
   } catch {
@@ -281,6 +284,9 @@ function readCompiled(key) {
 // Written aside and renamed into place: with an empty cache every worker compiles the same modules at once, and one
 // reading a file another is still writing would run half of it ("Unexpected end of input").
 function writeCompiled(key, code) {
+  if (!compiledDir) {
+    return;
+  }
   const file = path.join(compiledDir, `${key}.js`);
   const partial = `${file}.${process.pid}-${threadId}.tmp`;
   try {
@@ -323,6 +329,8 @@ function transformerName() {
 }
 
 module.exports = {
+  readCompiled,
+  writeCompiled,
   looksLikeJsx,
   configure,
   needsTransform,

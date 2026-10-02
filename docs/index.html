@@ -11,7 +11,7 @@
     <meta property="og:title" content="vyntra: a very fast test runner with the API of Jest and Vitest" />
     <meta
       property="og:description"
-      content="Your Jest and Vitest tests, unchanged, 2.7 times faster than Vitest and 5.5 times faster than Jest."
+      content="Your Jest and Vitest tests, unchanged, 2.6 times faster than Vitest and 5.5 times faster than Jest."
     />
     <link
       rel="icon"
@@ -155,7 +155,7 @@ Received: <span class="t-fail">0</span>
               <span class="step-number">3</span>
               <h3>Get the time back</h3>
               <p>
-                The same results, in a fraction of the time: 2.7 times faster than Vitest and 5.5 times faster than Jest
+                The same results, in a fraction of the time: 2.6 times faster than Vitest and 5.5 times faster than Jest
                 on the suite we measure.
               </p>
             </li>
@@ -171,26 +171,26 @@ Received: <span class="t-fail">0</span>
             <a href="benchmarks.html">benchmarks page</a>.
           </p>
           <div class="stats">
-            <div class="stat"><span class="value">2.7&times;</span><span class="label">Vitest 5's speed on a 981-test suite</span></div>
-            <div class="stat"><span class="value">5.5&times;</span><span class="label">Jest 30's speed on the same suite</span></div>
-            <div class="stat"><span class="value">2.9&times;</span><span class="label">Jest's speed on a 1,218-test backend, unchanged</span></div>
+            <div class="stat"><span class="value">3.9&times;</span><span class="label">Vitest 5's speed on the 3,701 tests of NestJS</span></div>
+            <div class="stat"><span class="value">2.5&times;</span><span class="label">Jest 29's speed on the 5,924 unit tests of Strapi</span></div>
+            <div class="stat"><span class="value">5.5&times;</span><span class="label">Jest 30's speed on a 981-test library suite</span></div>
             <div class="stat"><span class="value">0</span><span class="label">dependencies</span></div>
           </div>
           <div class="charts">
             <div class="chart">
               <h3>Running the whole suite</h3>
               <p class="subtitle">39 files, 981 tests. Seconds, less is better.</p>
-              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.1%;"></span></span><span class="value">0.68 s</span></div>
-              <div class="chart-row"><span class="name">Vitest 5 (no isolate)</span><span class="track"><span class="fill" style="width: 42%;"></span></span><span class="value">1.58 s</span></div>
-              <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 48.7%;"></span></span><span class="value">1.83 s</span></div>
-              <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">3.76 s</span></div>
+              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.3%;"></span></span><span class="value">0.90 s</span></div>
+              <div class="chart-row"><span class="name">Vitest 5 (no isolate)</span><span class="track"><span class="fill" style="width: 37.9%;"></span></span><span class="value">1.86 s</span></div>
+              <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 46.8%;"></span></span><span class="value">2.30 s</span></div>
+              <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">4.91 s</span></div>
             </div>
             <div class="chart">
               <h3>With coverage</h3>
               <p class="subtitle">Same suite, V8 coverage report. Seconds, less is better.</p>
-              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 21.6%;"></span></span><span class="value">1.12 s</span></div>
-              <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 55.8%;"></span></span><span class="value">2.89 s</span></div>
-              <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">5.18 s</span></div>
+              <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 19.9%;"></span></span><span class="value">1.31 s</span></div>
+              <div class="chart-row"><span class="name">Vitest 5</span><span class="track"><span class="fill" style="width: 52.2%;"></span></span><span class="value">3.44 s</span></div>
+              <div class="chart-row"><span class="name">Jest 30</span><span class="track"><span class="fill" style="width: 100%;"></span></span><span class="value">6.59 s</span></div>
             </div>
           </div>
           <a class="more-link" href="benchmarks.html">How it was measured, and where the time goes &rarr;</a>

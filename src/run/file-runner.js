@@ -120,19 +120,57 @@ class FileRunner {
     if (fixtures) {
       await fixtures.setup(test.fn);
     }
-    await invoke(test.fn, context, test.timeout ?? this.testTimeout, 'test');
-    // Assertions the test did not await: their failures would be lost otherwise.
-    const unawaited = test.pendingAssertions.filter((entry) => !entry.handled);
-    if (unawaited.length > 0) {
-      const settled = await Promise.allSettled(unawaited.map((entry) => entry.promise));
-      const rejected = settled.find((result) => result.status === 'rejected');
-      if (rejected) {
-        throw rejected.reason;
-      }
-    }
+    const timeout = test.timeout ?? this.testTimeout;
+    await invoke(test.fn, context, timeout, 'test');
+    await this.checkUnawaited(test, timeout);
     const countError = assertionCountError(test);
     if (countError) {
       throw countError;
+    }
+  }
+
+  // Assertions the test did not await (expect(promise).resolves... without await): their failures would be lost.
+  // vitest waits for them, within the test's timeout; Jest drops them, so under a Jest config only those that fail
+  // straight away count, and one that never settles (a promise of a stream never ended) does not hold the run.
+  async checkUnawaited(test, timeout) {
+    const unawaited = test.pendingAssertions.filter((entry) => !entry.handled);
+    if (unawaited.length === 0) {
+      return;
+    }
+    const outcomes = unawaited.map((entry) =>
+      entry.promise.then(
+        () => null,
+        (reason) => ({ reason })
+      )
+    );
+    const all = Promise.all(outcomes);
+    if (this.config.unawaitedAssertions === 'settled') {
+      const turn = new Promise((resolve) => {
+        realTimers.setImmediate(() => resolve([]));
+      });
+      const failed = (await Promise.race([all, turn])).find(Boolean);
+      if (failed) {
+        throw failed.reason;
+      }
+      return;
+    }
+    let timer;
+    const expired = new Promise((resolve, reject) => {
+      timer = realTimers.setTimeout(() => {
+        reject(
+          new Error(
+            `An assertion the test did not await (expect(...).resolves or .rejects without await) had not settled ${timeout}ms after the test ended. Await it, or the promise it checks never settles.`
+          )
+        );
+      }, timeout);
+    });
+    try {
+      const failed = (await Promise.race([all, expired])).find(Boolean);
+      if (failed) {
+        throw failed.reason;
+      }
+    } finally {
+      realTimers.clearTimeout(timer);
     }
   }
 
@@ -169,6 +207,13 @@ class FileRunner {
       errors.push(...(await FileRunner.runAll(test.onFailed.map((fn) => () => fn(context)))));
     }
     errors.push(...(await FileRunner.runAll(test.onFinished.reverse().map((fn) => () => fn(context)))));
+    // A rejection reported as unhandled may have been handled since: Node says so on its next turn (see
+    // catchUncaught in runtime.js), which comes before these errors are the test's.
+    if (this.file.uncaught.length > 0) {
+      await new Promise((resolve) => {
+        realTimers.setImmediate(resolve);
+      });
+    }
     errors.push(...this.file.uncaught.splice(0));
     state.test = null;
     return { errors, skipped };

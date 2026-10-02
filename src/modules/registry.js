@@ -11,10 +11,39 @@ const { automock } = require('./automock');
 // Query that marks an import as the real module, which the resolve hook must not replace by its mock.
 const ACTUAL = 'vyntra-actual';
 
-// While positive, require() loads real modules (requireActual) and the hooks serve files, not mocks.
-const bypass = { depth: 0 };
-
 const isThenable = (value) => typeof value?.then === 'function';
+
+// The mocked modules require() loads for real for now (requireActual, importActual), by key, with how many times
+// each is asked for: only the module asked for is the real one, as in Jest; what it requires gets its mocks.
+const bypassed = new Map();
+
+function bypass(key, load) {
+  bypassed.set(key, (bypassed.get(key) ?? 0) + 1);
+  const release = () => {
+    const count = bypassed.get(key) - 1;
+    if (count > 0) {
+      bypassed.set(key, count);
+    } else {
+      bypassed.delete(key);
+    }
+  };
+  let result;
+  try {
+    result = load();
+  } catch (error) {
+    release();
+    throw error;
+  }
+  if (isThenable(result)) {
+    return result.finally(release);
+  }
+  release();
+  return result;
+}
+
+// Whether require() of this mocked module gets the real one now (see bypass()).
+const isBypassed = (key) => bypassed.has(key);
+
 const isBare = (specifier) =>
   !specifier.startsWith('.') && !path.isAbsolute(specifier) && !specifier.startsWith('file:');
 
@@ -77,17 +106,7 @@ function importActual(entry) {
   // The marker tells the ES module hooks to serve the file, but a CommonJS dependency is reached
   // through require(), which only reads the bypass. Both have to stand aside, or a factory asking
   // for the original of a CommonJS module is handed its own mock.
-  bypass.depth += 1;
-  let pending;
-  try {
-    pending = import(`${pathToFileURL(file).href}?${ACTUAL}=${state.generation}`);
-  } catch (error) {
-    bypass.depth -= 1;
-    throw error;
-  }
-  return pending.finally(() => {
-    bypass.depth -= 1;
-  });
+  return bypass(entry.key, () => import(`${pathToFileURL(file).href}?${ACTUAL}=${state.generation}`));
 }
 
 // The mock when there is no factory: a manual mock, or the real module (given by actual()) mocked.
@@ -147,11 +166,9 @@ function settleDeferred(entry) {
 class ModuleMocks {
   constructor() {
     this.entries = new Map();
-    this.actual = bypass;
-  }
-
-  get bypass() {
-    return this.actual.depth;
+    // The modules loaded when the file registered its first mock, and whether it mocked a builtin (see stale()).
+    this.loadedBefore = null;
+    this.mocksBuiltin = false;
   }
 
   get size() {
@@ -159,7 +176,9 @@ class ModuleMocks {
   }
 
   register(specifier, from, { factory, spy = false } = {}) {
+    this.loadedBefore ??= new Set(Object.keys(require.cache));
     const key = resolveKey(specifier, from);
+    this.mocksBuiltin ||= key.startsWith('node:');
     this.entries.set(key, { key, specifier, from, factory, spy, ready: false, exports: undefined });
   }
 
@@ -178,12 +197,9 @@ class ModuleMocks {
   }
 
   requireActual(specifier, from) {
-    this.actual.depth += 1;
-    try {
-      return createRequire(from)(specifier);
-    } finally {
-      this.actual.depth -= 1;
-    }
+    const entry = this.lookup(resolveKey(specifier, from), specifier);
+    const load = () => createRequire(from)(specifier);
+    return entry ? bypass(entry.key, load) : load();
   }
 
   // The exports of a mocked module for require(): factories must be synchronous there.
@@ -280,12 +296,27 @@ class ModuleMocks {
     return lines.join('\n');
   }
 
+  // The modules not to leave loaded for the next file, which otherwise keeps node_modules loaded. Those loaded after
+  // the file's first mock may hold it (a package that required a mocked axios), so they go; those loaded before can
+  // not, nor can they hold one of these, so no package ends up in two copies. A mocked builtin reaches further: a
+  // package loaded before still requires fs, and a test that mocks fs changes packages too (fs-extra's
+  // createWriteStream = jest.fn()), so then everything goes, as under Jest, where every file loads its own copy.
+  stale() {
+    if (!this.loadedBefore) {
+      return [];
+    }
+    const loaded = Object.keys(require.cache);
+    return this.mocksBuiltin ? loaded : loaded.filter((key) => !this.loadedBefore.has(key));
+  }
+
   clear() {
     this.entries.clear();
+    this.loadedBefore = null;
+    this.mocksBuiltin = false;
   }
 }
 
 const mocks = new ModuleMocks();
 globalThis[Symbol.for('vyntra.mocks')] = mocks;
 
-module.exports = { mocks, resolveKey, importActual, ACTUAL };
+module.exports = { mocks, resolveKey, importActual, isBypassed, ACTUAL };

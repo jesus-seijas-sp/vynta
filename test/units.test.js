@@ -8,6 +8,8 @@ const { format } = require('../src/expect/format');
 const { configure: configureResolution } = require('../src/resolve-paths');
 const { markTypeImports } = require('../src/type-imports');
 const { fromVitestConfig } = require('../src/cli/vitest-config');
+const { SnapshotState } = require('../src/snapshot/snapshot-state');
+const { loadConfig } = require('../src/cli/config');
 
 describe('each titles', () => {
   // As it.each(rows)(name).
@@ -209,5 +211,20 @@ describe('fromVitestConfig', () => {
       { find: '@app', replacement: path.join(root, 'src') },
       { find: 'react', replacement: 'preact/compat' },
     ]);
+  });
+});
+
+describe('snapshot serialization', () => {
+  it('stores line breaks as \\n, as Jest does, whatever the system wrote', () => {
+    const snapshots = new SnapshotState(path.join(__dirname, 'none.test.js'));
+    expect(snapshots.serialize('a\r\nb\rc')).toBe('"a\nb\nc"');
+  });
+});
+
+describe('testMatch of a Jest config', () => {
+  it('keeps the directories of patterns that match anywhere, and drops <rootDir>/', async () => {
+    const root = path.join(__dirname, 'fixtures', 'jest-preset');
+    const config = await loadConfig({ rootDir: root, config: 'jest.config.unit.js' });
+    expect(config.include).toEqual(['**/tests/**/*.check.js']);
   });
 });

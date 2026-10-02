@@ -24,8 +24,9 @@ class SnapshotState {
     this.counts = { added: 0, updated: 0, matched: 0, failed: 0 };
   }
 
+  // Line breaks as \n, as Jest and vitest store them: a value with \r\n matches the snapshot on every system.
   serialize(value) {
-    return format(value, { escapeString: false, plugins: this.serializers });
+    return format(value, { escapeString: false, plugins: this.serializers }).replace(/\r\n|\r/g, '\n');
   }
 
   // Jest names snapshots "describe test 1", vitest "describe > test 1".

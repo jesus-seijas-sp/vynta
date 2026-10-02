@@ -28,8 +28,11 @@ function normalizeTable(table) {
     return parseTemplate(table[0], table.slice(1));
   }
   const rows = table.length === 1 && Array.isArray(table[0]) ? table[0] : table;
+  // Rows are spread into arguments only when every one is an array, as in Jest and vitest: in
+  // ['abc', '', [], {}] the empty array is one more value, not an empty row.
+  const spread = rows.every(Array.isArray);
   return rows.map((row) =>
-    Array.isArray(row)
+    spread
       ? { values: row, spread: true }
       : { values: row, spread: false, object: row !== null && typeof row === 'object' }
   );

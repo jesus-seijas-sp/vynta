@@ -54,6 +54,7 @@ class FakeClock {
     this.toFake = new Set(toFake);
     this.loopLimit = loopLimit;
     this.advanceTime = shouldAdvanceTime ? advanceTimeDelta : 0;
+    this.firing = 0;
   }
 
   add(type, callback, delay, args) {
@@ -62,10 +63,21 @@ class FakeClock {
     }
     const id = this.#nextId;
     this.#nextId += 1;
-    const ms = type === 'immediate' ? 0 : Math.max(1, Math.trunc(Number(delay)) || 0);
+    const ms = type === 'immediate' ? 0 : this.delayOf(type, delay);
     const timer = { id, type, callback, args, delay: ms, time: this.now + ms, ref: true };
     this.timers.set(id, timer);
     return createHandle(this, timer);
+  }
+
+  // As in @sinonjs/fake-timers, which Jest and vitest use: a timeout of 0 is due now (advanceTimersByTime(0) runs
+  // it), but 1ms when set from a timer's callback, so a chain of them can not keep a tick going; intervals take 1ms
+  // at least.
+  delayOf(type, delay) {
+    const ms = Math.max(0, Math.trunc(Number(delay)) || 0);
+    if (type === 'interval' || this.firing > 0) {
+      return Math.max(1, ms);
+    }
+    return ms;
   }
 
   clear(handle) {
@@ -93,7 +105,12 @@ class FakeClock {
     } else {
       this.timers.delete(timer.id);
     }
-    timer.callback(...timer.args);
+    this.firing += 1;
+    try {
+      timer.callback(...timer.args);
+    } finally {
+      this.firing -= 1;
+    }
   }
 
   checkLoops(count) {

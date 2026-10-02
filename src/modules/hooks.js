@@ -3,7 +3,7 @@ const Module = require('node:module');
 const { fileURLToPath } = require('node:url');
 const state = require('../state');
 const { hoistMocks } = require('./hoist');
-const { mocks, resolveKey, ACTUAL } = require('./registry');
+const { mocks, resolveKey, isBypassed, ACTUAL } = require('./registry');
 
 const MOCK_SCHEME = 'vyntra-mock:';
 
@@ -22,10 +22,10 @@ function installCjs() {
   installed.cjs = true;
   const load = Module._load;
   Module._load = function vyntraLoad(request, parent, ...rest) {
-    if (mocks.size > 0 && mocks.bypass === 0) {
+    if (mocks.size > 0) {
       const from = parent?.filename ?? path.join(process.cwd(), 'index.js');
       const entry = mocks.lookup(resolveKey(request, from), request);
-      if (entry) {
+      if (entry && !isBypassed(entry.key)) {
         return mocks.cjsExports(entry);
       }
     }

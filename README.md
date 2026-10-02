@@ -14,22 +14,43 @@ npx vyntra --coverage       # with V8 coverage
 ## Speed
 
 Measured on [schiva](https://github.com/jesus-seijas-sp/schiva) (39 files, 981 tests, CommonJS), unchanged test
-files, Node.js 22.21, Windows 11, i7-13700H, median of 7 runs of the whole command:
+files, Node.js 22.21, Windows 11, i7-13700H, median of 7 runs of the whole command with the runners taking turns:
 
 | Runner                  |  Wall time | With coverage |
 | ----------------------- | ---------: | ------------: |
-| **vyntra**               | **0.68 s** |    **1.12 s** |
-| Vitest 5.0              |     1.83 s |        2.89 s |
-| Vitest 5.0 --no-isolate |     1.58 s |             - |
-| Jest 30                 |     3.76 s |        5.18 s |
+| **vyntra 0.3**          | **0.90 s** |    **1.31 s** |
+| Vitest 5.0              |     2.30 s |        3.44 s |
+| Vitest 5.0 --no-isolate |     1.86 s |             - |
+| Jest 30.5               |     4.91 s |        6.59 s |
 
-Run it on your project with `node bench/compare.js <runs> 'name=command' ...`.
+On the test suites of open-source projects, run as their repositories have them (no file changed, vyntra reading
+the project's own `vitest.config.mts` or `jest.config.js`), the runners taking turns:
+
+| Project                                             | Suite                                                         |     vyntra |       Other runner | Same results                       |
+| --------------------------------------------------- | ------------------------------------------------------------- | ---------: | -----------------: | ---------------------------------- |
+| [NestJS](https://github.com/nestjs/nest) `7fb52e7`  | 305 files, 3,701 tests, TypeScript with decorator metadata    |  **8.9 s** | Vitest 5.0: 34.9 s | Yes, and one file more (see below) |
+| [Strapi](https://github.com/strapi/strapi) `bc653e8` | 22 packages, 5,924 tests, TypeScript through `@swc/jest`      | **50.1 s** | Jest 29.6: 126.0 s | Yes, but 3 tests (see below)       |
+| [Yarn](https://github.com/yarnpkg/berry) `e4e423a`  | 44 files, 949 tests, TypeScript, Jest transformer, PnP        | **11.9 s** |  Jest 29.2: 19.9 s | Yes, test by test                  |
+
+- NestJS: median of 5 runs; 11.3 s with vyntra's compile cache emptied first. Both runners fail 4 files that import
+  packages missing from the install measured; Vitest loses one more on Windows, where a test sending `SIGTERM` to
+  its own process ends the Vitest worker running it.
+- Strapi: each package's unit suite, one after the other, median of 3 rounds, after `yarn build`; vyntra with
+  `--pool forks`. Two tests of `core/upload` expect what Jest does, which can not run the `import()` of an ES
+  module, and one of `core/core` needs `NODE_ENV=test`, which Jest sets and vyntra does not.
+- Yarn: median of 5 runs; both commands start through Yarn (`yarn jest`, `yarn node vyntra`), about 2.8 s of each
+  run. With `--splitFiles`, which runs the slowest file (Yarn's shell, hundreds of processes) in parts, vyntra
+  takes 9.1 s.
+
+The details are on the [benchmarks page](docs/benchmarks.html). Run it on your project with
+`node bench/compare.js <runs> 'name=command' ...`.
 
 Where the time goes, and what vyntra does instead:
 
 - **No transform pipeline.** Jest runs every file through Babel, Vitest through Vite. vyntra loads files with Node.js
-  itself (`require`, `import`, and Node's own type stripping for TypeScript). Mock hoisting, the only transform tests
-  need, is a small scanner that runs only on files calling `vi.mock()`/`jest.mock()`.
+  itself (`require`, `import`, and Node's own type stripping for TypeScript), and compiles only what Node.js can not
+  run: decorators, JSX, or what the project's Jest `transform` asks for, kept on disk between runs. Mock hoisting is a
+  small scanner that runs only on files calling `vi.mock()`/`jest.mock()`.
 - **Warm workers, cheap isolation.** Worker threads are reused between files. Isolation between files drops the
   project modules from the cache (ES modules get a fresh copy through a query string) but keeps `node_modules`
   loaded, instead of starting a new worker or VM context per file.

@@ -147,3 +147,82 @@ describe('vitest config', () => {
     expect(statuses['has the aliases and env of the config in a worker too']).toBe('passed');
   });
 });
+
+describe('jest transform', () => {
+  const { statuses, files } = runFixture('jest-transform');
+
+  it("compiles with the project's transformer, made with its options", () => {
+    expect(statuses['compiles the project files with its Jest transformer']).toBe('passed');
+  });
+
+  it("gives tests Jest's snapshotState._updateSnapshot", () => {
+    expect(statuses["tells Jest's snapshot mode to tests that read it"]).toBe('passed');
+  });
+
+  it('leaves out the files under modulePathIgnorePatterns', () => {
+    expect(files).toHaveLength(1);
+  });
+});
+
+describe('worker stdio', () => {
+  it("lets a child process take the test's own stdin and stdout", () => {
+    const { statuses } = runFixture('process');
+    expect(statuses["a child process can be given the test's own stdin and stdout"]).toBe('passed');
+  });
+});
+
+describe('jest preset', () => {
+  it("applies the preset of a config given with --config, the config's setup files after its own", () => {
+    const { statuses } = runFixture('jest-preset', ['--config', 'jest.config.unit.js']);
+    expect(statuses['runs the files the preset matches, with its setup files before the config ones']).toBe('passed');
+  });
+});
+
+describe('vitest config in a package with no type', () => {
+  it('loads it as Vite would: an ES module with __dirname, and no warning from Node', () => {
+    const { statuses } = runFixture('vitest-typeless');
+    expect(statuses['reads a config that uses __dirname in a package with no type']).toBe('passed');
+  });
+});
+
+describe('isolation between files of one thread', () => {
+  const { statuses, tests, files } = runFixture('isolation', ['--maxWorkers', '1']);
+
+  it('gives each file the env, packages and globals a fresh Jest file would have', () => {
+    // first.test.js and second.test.js: the same test, run one after the other in the same thread.
+    const fresh = files
+      .flatMap((file) => file.tests)
+      .filter((test) => test.path.at(-1).startsWith('starts with what a fresh file has'));
+    expect(fresh.map((test) => test.status)).toEqual(['passed', 'passed']);
+  });
+
+  it('mocks the dependencies of a module given by requireActual', () => {
+    expect(statuses['requireActual gives the real module, whose own dependencies still get their mocks']).toBe(
+      'passed'
+    );
+  });
+
+  it('does not count a rejection handled after fake timers ran', () => {
+    expect(statuses['a rejection handled after fake timers ran is not an unhandled one']).toBe('passed');
+  });
+
+  it('runs a fake timeout of 0 on advanceTimersByTime(0)', () => {
+    expect(statuses['a timeout of 0 runs with advanceTimersByTime(0), as with sinon']).toBe('passed');
+  });
+
+  it('gives each value of a table that is not all arrays as one argument', () => {
+    const rows = Object.keys(tests).filter((name) => name.startsWith('a table that is not all arrays'));
+    expect(rows).toHaveLength(3);
+  });
+
+  it('applies jest.doMock and jest.dontMock in a file without jest.mock', () => {
+    expect(statuses['jest.doMock and jest.dontMock work without a jest.mock in the file']).toBe('passed');
+  });
+});
+
+describe('unawaited assertions under a Jest config', () => {
+  it('drops one whose promise never settles, as Jest does, without waiting', () => {
+    const { statuses } = runFixture('jest-preset', ['--config', 'jest.config.unit.js']);
+    expect(statuses['drops an assertion it did not await whose promise never settles, as Jest does']).toBe('passed');
+  });
+});

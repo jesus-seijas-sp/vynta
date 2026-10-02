@@ -65,6 +65,9 @@ const chained = {
   doMock: modules.doMock,
   unmock: modules.unmock,
   doUnmock: modules.doUnmock,
+  // Jest's names for doUnmock and for unmocking a module with what it requires.
+  dontMock: modules.doUnmock,
+  deepUnmock: modules.unmock,
   setTimeout: (ms) => {
     state.config.testTimeout = ms;
   },

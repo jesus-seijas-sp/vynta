@@ -261,8 +261,10 @@ function subsetEquals(received, object, seen = new WeakMap()) {
   if (!isObject(object) || isAsymmetric(object) || isContainer(object)) {
     return equals(received, object);
   }
+  // As in Jest (and vitest): every key of an object must match, so one with no keys, { value: {} }, matches any
+  // received value, even one that is not an object.
   if (!isObject(received)) {
-    return false;
+    return !Array.isArray(object) && keysOf(object).length === 0;
   }
   if (Array.isArray(object)) {
     return (

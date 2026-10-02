@@ -7,7 +7,7 @@ const { realTimers } = require('./timers/real-timers');
 const { setColors } = require('./colors');
 const { CoverageCollector } = require('./coverage/collector');
 const { installGlobals } = require('./index');
-const { isolateModules } = require('./loader');
+const { isolateModules, forgetModules } = require('./loader');
 const { runFile, reportUncaught } = require('./run/run-file');
 const { mocks } = require('./modules/registry');
 const { ResolveCache } = require('./resolve-cache');
@@ -82,6 +82,29 @@ function shimProcessKill() {
   };
 }
 
+// A worker thread's process.stdin/stdout/stderr are streams of the thread, not of the process: given to a child
+// process as its stdio (a shell running commands with the test's own streams), Node refuses them. In a Jest worker
+// they are the worker process's pipes, which no test writes to: the child gets no input, and writes where the
+// process does.
+function shimWorkerStdio() {
+  if (isMainThread) {
+    return;
+  }
+  // eslint-disable-next-line global-require -- only worker threads need it
+  const { ChildProcess } = require('node:child_process');
+  const replacement = (stream) => {
+    if (stream === process.stdin) {
+      return 'ignore';
+    }
+    return stream === process.stdout || stream === process.stderr ? 'inherit' : stream;
+  };
+  const { spawn } = ChildProcess.prototype;
+  ChildProcess.prototype.spawn = function spawnWithWorkerStdio(options) {
+    const stdio = Array.isArray(options?.stdio) ? options.stdio.map(replacement) : options?.stdio;
+    return spawn.call(this, stdio === options?.stdio ? options : { ...options, stdio });
+  };
+}
+
 let settling = false;
 
 // Aborts the finished file's pending document work, and lets the rejections that causes go by.
@@ -98,13 +121,16 @@ async function settle() {
   settling = false;
 }
 
+// The promises whose rejections were reported as unhandled, until one is handled after all.
+const unhandled = new WeakMap();
+
 function catchUncaught() {
   process.on('uncaughtException', (error) => {
     if (!reportUncaught(error)) {
       throw error;
     }
   });
-  process.on('unhandledRejection', (reason) => {
+  process.on('unhandledRejection', (reason, promise) => {
     // What stopping a finished file's document rejects is no one's failure.
     if (settling && reason?.name === 'AbortError') {
       return;
@@ -115,6 +141,16 @@ function catchUncaught() {
     }
     if (!reportUncaught(reason)) {
       throw reason;
+    }
+    unhandled.set(promise, reason);
+  });
+  // A rejection the test handles later (a promise rejected while fake timers run, awaited with .rejects afterwards)
+  // was never the test's failure: Jest does not count it, and Node says when it happens.
+  process.on('rejectionHandled', (promise) => {
+    const reason = unhandled.get(promise);
+    const pending = state.file?.uncaught ?? [];
+    if (unhandled.delete(promise) && pending.includes(reason)) {
+      pending.splice(pending.indexOf(reason), 1);
     }
   });
 }
@@ -144,8 +180,11 @@ async function createRuntime(config) {
   catchUncaught();
   shimProcessSend();
   shimProcessKill();
+  shimWorkerStdio();
   await loadPlugins(config);
   const pristine = globalSnapshot.snapshot();
+  const pristineEnv = globalSnapshot.snapshotEnv();
+  globalSnapshot.keepGlobalsRemovable();
   installEnvironment(config);
   let installed = config.environment ?? 'node';
   // A document keeps cookies, storage and nodes, which the next file must not inherit.
@@ -165,6 +204,8 @@ async function createRuntime(config) {
     const result = await runFile(path, { ...config, environment: wanted }, shard);
     await settle();
     releaseStubs();
+    globalSnapshot.restoreEnv(pristineEnv);
+    forgetModules(mocks.stale());
     mocks.clear();
     // Before the modules of the file are released.
     await coverage?.take();

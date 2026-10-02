@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const Module = require('node:module');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
+const { fileURLToPath, pathToFileURL } = require('node:url');
 const { globToRegExp } = require('./glob');
 const { VITEST_CONFIG_FILES, isVitestConfig, fromVitestConfig } = require('./vitest-config');
 
@@ -17,6 +17,9 @@ const DEFAULTS = {
   // The order of a suite's afterEach and afterAll hooks: 'stack' (last registered first, as vitest) or 'list'
   // (declaration order, as Jest).
   hookOrder: 'stack',
+  // Assertions a test does not await (expect(promise).resolves.toBe(x) without await): 'wait' for them, within the
+  // test's timeout, as vitest does; 'settled' only counts those that fail straight away, as Jest drops them.
+  unawaitedAssertions: 'wait',
   // Project modules are loaded fresh for every test file; node_modules stay loaded.
   isolate: true,
   // Packages loaded fresh for every test file too: those that keep state of their own at module level,
@@ -74,10 +77,78 @@ const VITEST_CONFIG_STUB = pathToFileURL(path.join(__dirname, 'vitest-config-stu
 
 // A vitest config imports defineConfig from 'vitest/config', which loads all of Vite: while the config loads, it gets
 // vyntra's stand-in, which also lets it load where vitest is no longer installed.
+const USES_PATHS = /\b__(?:dirname|filename)\b/;
+const DECLARES_PATHS = /\b(?:const|let|var|function)\s+__(?:dirname|filename)\b/;
+const ESM_SYNTAX = /^\s*(?:import|export)[\s{*]/m;
+
+// The "type" of the nearest package.json, per directory (null when it has none).
+const packageTypes = new Map();
+
+function nearestType(dir) {
+  if (!packageTypes.has(dir)) {
+    let type;
+    try {
+      ({ type } = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')));
+      type ??= null;
+    } catch {
+      const parent = path.dirname(dir);
+      type = parent === dir ? null : nearestType(parent);
+    }
+    packageTypes.set(dir, type);
+  }
+  return packageTypes.get(dir);
+}
+
+// A module of the project the config loads, as Vite runs it: an ES module when it says it is one or is written as
+// one (in a package with no "type", where Node would parse it as CommonJS first and warn about it,
+// MODULE_TYPELESS_PACKAGE_JSON), with the __dirname and __filename Vite's bundling gives a config (Strapi's write
+// `root: __dirname`). Anything else is left to Node.
+// What the next load hook gives, or the file read here where it gives a CommonJS module without its source: Yarn's
+// Plug'n'Play loader does, which hooks registered with module.registerHooks must not (see loadOrRead in loader.js).
+function loadNext(url, context, nextLoad) {
+  try {
+    return nextLoad(url, context);
+  } catch (error) {
+    if (error?.code !== 'ERR_INVALID_RETURN_PROPERTY_VALUE' || !url.startsWith('file:')) {
+      throw error;
+    }
+    const file = fileURLToPath(url);
+    const format = path.extname(file) === '.json' ? 'json' : 'commonjs';
+    return { format, source: fs.readFileSync(file, 'utf8'), shortCircuit: true };
+  }
+}
+
+function loadConfigModule(url, context, nextLoad) {
+  if (!url.startsWith('file:') || url.includes('/node_modules/')) {
+    return loadNext(url, context, nextLoad);
+  }
+  const file = fileURLToPath(url);
+  const ext = path.extname(file);
+  const typescript = /^\.[cm]?ts$/.test(ext);
+  const declared = { '.mjs': 'module', '.mts': 'module', '.cjs': 'commonjs', '.cts': 'commonjs' }[ext];
+  if (declared === 'commonjs' || !/^\.[cm]?[jt]s$/.test(ext)) {
+    return loadNext(url, context, nextLoad);
+  }
+  const type = declared ?? nearestType(path.dirname(file));
+  if (type === 'commonjs') {
+    return loadNext(url, context, nextLoad);
+  }
+  const source = fs.readFileSync(file, 'utf8');
+  if (type !== 'module' && !ESM_SYNTAX.test(source)) {
+    return loadNext(url, context, nextLoad);
+  }
+  const paths =
+    USES_PATHS.test(source) && !DECLARES_PATHS.test(source)
+      ? 'const __dirname = import.meta.dirname, __filename = import.meta.filename;'
+      : '';
+  return { format: typescript ? 'module-typescript' : 'module', source: `${paths}${source}`, shortCircuit: true };
+}
+
 async function importWithStubs(file) {
   const hooks = Module.registerHooks?.({
     resolve: (specifier, context, nextResolve) =>
       specifier === 'vitest/config' ? { url: VITEST_CONFIG_STUB, shortCircuit: true } : nextResolve(specifier, context),
+    load: loadConfigModule,
   });
   try {
     return await import(pathToFileURL(file).href);
@@ -97,10 +168,15 @@ async function importConfig(file) {
   return typeof config === 'function' ? config({ command: 'serve', mode: 'test', isSsrBuild: false }) : config;
 }
 
-// A config with a `test` section is a vitest (or Vite) config, whatever file it comes from.
+// A config with a `test` section is a vitest (or Vite) config, whatever file it comes from; a jest*.config.* file
+// given with --config (jest.config.front.js) is a Jest config.
 async function importAnyConfig(file, rootDir) {
   const config = await importConfig(file);
-  return isVitestConfig(config) ? fromVitestConfig(config, rootDir) : config;
+  if (isVitestConfig(config)) {
+    return fromVitestConfig(config, rootDir);
+  }
+  // eslint-disable-next-line no-use-before-define -- the Jest options are read further down
+  return /^jest[.-]/.test(path.basename(file)) ? fromJestConfig(config, rootDir) : config;
 }
 
 function readPackageJson(rootDir) {
@@ -113,8 +189,49 @@ function readPackageJson(rootDir) {
 
 const resolveRootDir = (value, rootDir) => (typeof value === 'string' ? value.replaceAll('<rootDir>', rootDir) : value);
 
+// The file a Jest `preset` names: a path (to a file, or a directory with jest-preset.json/.js), or a package's own
+// jest-preset, both from the root.
+function presetFile(preset, rootDir) {
+  const require = Module.createRequire(path.join(rootDir, 'package.json'));
+  if (preset.startsWith('.') || path.isAbsolute(preset)) {
+    const target = path.resolve(rootDir, preset);
+    const inside = ['jest-preset.json', 'jest-preset.js', 'jest-preset.cjs']
+      .map((name) => path.join(target, name))
+      .find((file) => fs.existsSync(file));
+    return inside ?? target;
+  }
+  return require.resolve(`${preset}/jest-preset`);
+}
+
+// A Jest config with its preset under it, as Jest merges them: the config wins, but its setup files come after the
+// preset's, and its moduleNameMapper, transform and globals are added to the preset's (its own first).
+function withJestPreset(jest, rootDir) {
+  if (!jest.preset) {
+    return jest;
+  }
+  // eslint-disable-next-line global-require -- the preset the config names
+  const preset = withJestPreset(require(presetFile(jest.preset, rootDir)), rootDir);
+  const merged = { ...preset, ...jest };
+  ['setupFiles', 'setupFilesAfterEnv'].forEach((key) => {
+    merged[key] = [...(preset[key] ?? []), ...(jest[key] ?? [])];
+  });
+  ['moduleNameMapper', 'transform', 'globals'].forEach((key) => {
+    if (preset[key] || jest[key]) {
+      merged[key] = {
+        ...jest[key],
+        ...Object.fromEntries(Object.entries(preset[key] ?? {}).filter(([k]) => !jest[key]?.[k])),
+      };
+    }
+  });
+  delete merged.preset;
+  // Jest settles the root before the preset: a preset's rootDir does not move it.
+  merged.rootDir = jest.rootDir;
+  return merged;
+}
+
 // The options of a Jest config vyntra understands, so a Jest project runs without a vyntra config.
-function fromJestConfig(jest, rootDir) {
+function fromJestConfig(original, rootDir) {
+  const jest = withJestPreset(original, rootDir);
   const config = {};
   const copy = [
     'testTimeout',
@@ -137,6 +254,7 @@ function fromJestConfig(jest, rootDir) {
       config[key] = jest[key];
     });
   config.hookOrder = 'list';
+  config.unawaitedAssertions = 'settled';
   if (jest.collectCoverage) {
     config.coverage = true;
   }
@@ -157,10 +275,26 @@ function fromJestConfig(jest, rootDir) {
     config.setupFiles = setupFiles.map((file) => resolveRootDir(file, rootDir));
   }
   if (jest.testMatch) {
-    config.include = jest.testMatch.map((glob) => resolveRootDir(glob, rootDir).replace(/^.*\*\*\//, '**/'));
+    // Jest matches them against absolute paths: "<rootDir>/x" is x from the root, which vyntra's globs are relative
+    // to; the others ("**/__tests__/**/*.js") match anywhere, as they are.
+    config.include = jest.testMatch.map((glob) => glob.replace(/^<rootDir>\//, '').replace(/^\.\//, ''));
   }
-  if (jest.testPathIgnorePatterns) {
-    config.excludePatterns = jest.testPathIgnorePatterns.map((pattern) => resolveRootDir(pattern, rootDir));
+  // The project's transformers, which the files they match are compiled with (see jest-transform.js).
+  if (jest.transform) {
+    config.jestTransform = jest.transform;
+  }
+  if (jest.transformIgnorePatterns) {
+    config.transformIgnorePatterns = jest.transformIgnorePatterns;
+  }
+  // Jest does not see the files under modulePathIgnorePatterns at all, so none of their tests run either. These are
+  // regular expressions, matched against paths with "/": <rootDir> goes in as one ("C:\work" would read "\w").
+  const ignored = [...(jest.testPathIgnorePatterns ?? []), ...(jest.modulePathIgnorePatterns ?? [])];
+  if (ignored.length > 0) {
+    const rootPattern = rootDir
+      .split(path.sep)
+      .join('/')
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    config.excludePatterns = ignored.map((pattern) => pattern.replaceAll('<rootDir>', rootPattern));
   }
   if (jest.roots) {
     config.roots = jest.roots.map((root) => resolveRootDir(root, rootDir));

@@ -44,12 +44,22 @@ expect.hasAssertions = () => {
   }
 };
 
+function snapshotMode() {
+  if (state.config.update) {
+    return 'all';
+  }
+  return (state.config.ci ?? Boolean(process.env.CI)) ? 'none' : 'new';
+}
+
 expect.getState = () => ({
   assertionCalls: state.file?.assertionCalls ?? 0,
   currentTestName: state.test?.fullName,
   testPath: state.file?.path,
   expectedAssertionsNumber: state.test?.expectedAssertions ?? null,
   isExpectingAssertions: Boolean(state.test?.hasAssertions),
+  // What Jest's SnapshotState does with snapshots: write them all (-u), never (CI) or only the new ones. Tests read
+  // its _updateSnapshot to decide whether to regenerate fixtures.
+  snapshotState: { _updateSnapshot: snapshotMode() },
 });
 
 expect.setState = ({ expectedAssertionsNumber } = {}) => {

@@ -38,6 +38,8 @@
         <h4>Benchmarks</h4>
         <ul>
           <li><a href="#summary">Summary</a></li>
+          <li><a href="#open-source">Open-source projects</a></li>
+          <li><a href="#strapi">Strapi</a></li>
           <li><a href="#library">A library suite</a></li>
           <li><a href="#backend">A backend suite</a></li>
           <li><a href="#where">Where the time goes</a></li>
@@ -54,11 +56,133 @@
 
         <h2 id="summary">Summary</h2>
         <div class="stats">
-          <div class="stat"><span class="value">2.7&times;</span><span class="label">faster than Vitest 5 on a library suite</span></div>
-          <div class="stat"><span class="value">5.5&times;</span><span class="label">faster than Jest 30 on the same suite</span></div>
-          <div class="stat"><span class="value">2.6&times;</span><span class="label">faster than Vitest 5 with coverage</span></div>
-          <div class="stat"><span class="value">2.9&times;</span><span class="label">faster than Jest 30 on a large backend suite</span></div>
+          <div class="stat"><span class="value">3.9&times;</span><span class="label">faster than Vitest 5 on the tests of NestJS</span></div>
+          <div class="stat"><span class="value">2.5&times;</span><span class="label">faster than Jest 29 on the unit tests of Strapi</span></div>
+          <div class="stat"><span class="value">1.7&times;</span><span class="label">faster than Jest 29 on the tests of Yarn (2.2&times; with <code>--splitFiles</code>)</span></div>
+          <div class="stat"><span class="value">2.6&times;</span><span class="label">faster than Vitest 5 on a library suite (5.5&times; Jest 30)</span></div>
         </div>
+
+        <h2 id="open-source">Open-source projects</h2>
+        <p>
+          The test suites of three large open-source projects, run as their repositories have them: no file changed, and
+          vyntra reading the project's own configuration (<code>vitest.config.mts</code>, <code>jest.config.js</code>).
+        </p>
+
+        <h3 id="nestjs">NestJS, with Vitest</h3>
+        <p>
+          <a href="https://github.com/nestjs/nest">nestjs/nest</a> at <code>7fb52e7</code>: 305 files, 3,701 tests, in
+          TypeScript with legacy decorators and their metadata (which Nest's dependency injection reads), imports of
+          <code>./file.js</code> that name <code>file.ts</code>, and aliases for its packages.
+        </p>
+        <div class="charts">
+          <div class="chart">
+            <h3>Whole suite</h3>
+            <p class="subtitle">Seconds, median of 5 runs (3 for the cold cache), the runners taking turns. Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 25.5%"></span></span><span class="value">8.9 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra, cold cache</span><span class="track"><span class="fill" style="width: 32.4%"></span></span><span class="value">11.3 s</span></div>
+            <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">34.9 s</span></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="numbers">
+            <thead><tr><th>Runner</th><th>Wall time</th><th>Files passed</th><th>Tests passed</th></tr></thead>
+            <tbody>
+              <tr><td><strong>vyntra 0.3</strong></td><td><strong>8.9 s</strong></td><td>301 of 305</td><td>3,701 of 3,701</td></tr>
+              <tr><td><strong>vyntra 0.3</strong>, compile cache emptied first</td><td><strong>11.3 s</strong></td><td>301 of 305</td><td>3,701 of 3,701</td></tr>
+              <tr><td>Vitest 5.0.2</td><td>34.9 s</td><td>300 of 305</td><td>3,664 of 3,701</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Both fail the same four files, which import packages missing from the install measured
+          (<code>@fastify/error</code>, <code>fast-querystring</code>, <code>@nats-io/nats-core</code>). Vitest loses one
+          more: a test of shutdown hooks sends <code>SIGTERM</code> to its own process, which on Windows ends the Vitest
+          worker running it, and the 37 tests of that file are not reported. vyntra hands the signal to the test's listeners.
+        </p>
+        <p>
+          vyntra compiles the TypeScript (with the project's own TypeScript, for the decorator metadata) once and keeps it
+          in <code>node_modules/.cache/vyntra</code>: the cold-cache row is a run with that cache deleted, which compiles
+          every file first.
+        </p>
+
+        <h3 id="strapi">Strapi, with Jest</h3>
+        <p>
+          <a href="https://github.com/strapi/strapi">strapi/strapi</a> at <code>bc653e8</code>: the unit tests of its 22
+          packages with a Jest suite, 5,924 tests, in TypeScript compiled by <code>@swc/jest</code>, with shared Jest
+          presets, <code>jest.mock()</code> in many files, and SQLite through knex. Each package runs its own suite, as
+          Strapi's <code>test:unit</code> does, one package after the other, Jest and vyntra taking turns.
+        </p>
+        <div class="charts">
+          <div class="chart">
+            <h3>All 22 packages</h3>
+            <p class="subtitle">Seconds, median of 3 rounds (each package, then the whole of a round). Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 39.8%"></span></span><span class="value">50.1 s</span></div>
+            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">126.0 s</span></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="numbers">
+            <thead><tr><th>Package</th><th>Tests</th><th>Jest 29.6</th><th>vyntra 0.3</th></tr></thead>
+            <tbody>
+              <tr><td><code>core/core</code></td><td>1,038</td><td>9.0 s</td><td><strong>4.4 s</strong></td></tr>
+              <tr><td><code>core/admin</code></td><td>898</td><td>10.2 s</td><td><strong>4.0 s</strong></td></tr>
+              <tr><td><code>core/utils</code></td><td>653</td><td>6.4 s</td><td><strong>1.5 s</strong></td></tr>
+              <tr><td><code>core/upload</code></td><td>648</td><td>8.5 s</td><td><strong>4.4 s</strong></td></tr>
+              <tr><td><code>core/content-manager</code></td><td>532</td><td>11.7 s</td><td><strong>2.9 s</strong></td></tr>
+              <tr><td><code>core/data-transfer</code></td><td>382</td><td>8.2 s</td><td><strong>3.4 s</strong></td></tr>
+              <tr><td><code>core/database</code></td><td>344</td><td>5.9 s</td><td><strong>2.9 s</strong></td></tr>
+              <tr><td><code>core/strapi</code></td><td>310</td><td>10.3 s</td><td><strong>3.5 s</strong></td></tr>
+              <tr><td>The 14 others</td><td>1,119</td><td>51.7 s</td><td><strong>20.3 s</strong></td></tr>
+              <tr><td><strong>All 22</strong></td><td><strong>5,924</strong></td><td>126.0 s</td><td><strong>50.1 s</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The results are the same, test by test, in 20 of the 22 packages, the failures included (12 tests that fail under
+          both on the machine measured). In <code>core/core</code> one test checks a security header the app only sends
+          when <code>NODE_ENV</code> is <code>test</code>, which Jest sets and vyntra leaves as it is. In
+          <code>core/upload</code> two tests expect the MIME detection to be unavailable, as it is under Jest, which can not
+          run the <code>import()</code> of an ES module without <code>--experimental-vm-modules</code>; Node.js runs it, so
+          vyntra detects the type and the expectation fails.
+        </p>
+        <p>
+          vyntra ran with <code>--pool forks</code>, workers in child processes as Jest's are: on Windows, a worker thread
+          that loaded both SQLite's and swc's native modules can crash the process when it ends. Strapi's packages export
+          their build, so the monorepo was built (<code>yarn build</code>) before either runner ran.
+        </p>
+
+        <h3 id="yarn">Yarn, with Jest</h3>
+        <p>
+          <a href="https://github.com/yarnpkg/berry">yarnpkg/berry</a> (Yarn 4) at <code>e4e423a</code>: 44 files, 949
+          tests, in TypeScript compiled by the project's own Jest transformer (esbuild, to CommonJS), with Plug'n'Play: no
+          <code>node_modules</code>, every package read from a zip archive. Both runners start through Yarn
+          (<code>yarn jest</code>, <code>yarn node vyntra</code>), which takes about 2.8 seconds of each run.
+        </p>
+        <div class="charts">
+          <div class="chart">
+            <h3>Whole suite</h3>
+            <p class="subtitle">Seconds, median of 5 runs (3 with <code>--splitFiles</code>), the runners taking turns. Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra, <code>--splitFiles</code></span><span class="track"><span class="fill" style="width: 45.7%"></span></span><span class="value">9.1 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 59.8%"></span></span><span class="value">11.9 s</span></div>
+            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">19.9 s</span></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="numbers">
+            <thead><tr><th>Runner</th><th>Wall time</th><th>Tests passed</th><th>Skipped</th><th>Failed</th></tr></thead>
+            <tbody>
+              <tr><td><strong>vyntra 0.3</strong></td><td><strong>11.9 s</strong></td><td>936</td><td>12</td><td>1</td></tr>
+              <tr><td><strong>vyntra 0.3</strong>, <code>--splitFiles</code></td><td><strong>9.1 s</strong></td><td>936</td><td>12</td><td>1</td></tr>
+              <tr><td>Jest 29.2</td><td>19.9 s</td><td>936</td><td>12</td><td>1</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The results are the same test by test, the one failure included (a test of zip archives that fails under Jest
+          too). vyntra's run is as long as its slowest file, the tests of Yarn's shell, which start hundreds of
+          processes: <code>--splitFiles</code> runs such a file in parts on several workers, which is why it is opt-in
+          (the tests of the file must not depend on each other).
+        </p>
 
         <h2 id="library">A library suite</h2>
         <p>
@@ -69,28 +193,28 @@
         <div class="charts">
           <div class="chart">
             <h3>Whole suite</h3>
-            <p class="subtitle">Seconds, median of 7 runs. Less is better.</p>
-            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.1%"></span></span><span class="value">0.68 s</span></div>
-            <div class="chart-row"><span class="name">Vitest (no isolate)</span><span class="track"><span class="fill" style="width: 42%"></span></span><span class="value">1.58 s</span></div>
-            <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 48.7%"></span></span><span class="value">1.83 s</span></div>
-            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">3.76 s</span></div>
+            <p class="subtitle">Seconds, median of 7 runs, the runners taking turns. Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 18.3%"></span></span><span class="value">0.90 s</span></div>
+            <div class="chart-row"><span class="name">Vitest (no isolate)</span><span class="track"><span class="fill" style="width: 37.9%"></span></span><span class="value">1.86 s</span></div>
+            <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 46.8%"></span></span><span class="value">2.30 s</span></div>
+            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">4.91 s</span></div>
           </div>
           <div class="chart">
             <h3>With coverage</h3>
-            <p class="subtitle">Seconds, median of 7 runs. Less is better.</p>
-            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 21.6%"></span></span><span class="value">1.12 s</span></div>
-            <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 55.8%"></span></span><span class="value">2.89 s</span></div>
-            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">5.18 s</span></div>
+            <p class="subtitle">Seconds, median of 7 runs, the runners taking turns. Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 19.9%"></span></span><span class="value">1.31 s</span></div>
+            <div class="chart-row"><span class="name">Vitest</span><span class="track"><span class="fill" style="width: 52.2%"></span></span><span class="value">3.44 s</span></div>
+            <div class="chart-row"><span class="name">Jest</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">6.59 s</span></div>
           </div>
         </div>
         <div class="table-wrap">
           <table class="numbers">
             <thead><tr><th>Runner</th><th>Wall time</th><th>With coverage</th><th>Lines covered</th></tr></thead>
             <tbody>
-              <tr><td><strong>vyntra 0.1</strong></td><td><strong>0.68 s</strong></td><td><strong>1.12 s</strong></td><td>94.5 %</td></tr>
-              <tr><td>Vitest 5.0.3</td><td>1.83 s</td><td>2.89 s</td><td>92.7 %</td></tr>
-              <tr><td>Vitest 5.0.3, <code>--no-isolate</code></td><td>1.58 s</td><td>&ndash;</td><td>&ndash;</td></tr>
-              <tr><td>Jest 30.2</td><td>3.76 s</td><td>5.18 s</td><td>92.6 %</td></tr>
+              <tr><td><strong>vyntra 0.3</strong></td><td><strong>0.90 s</strong></td><td><strong>1.31 s</strong></td><td>94.5 %</td></tr>
+              <tr><td>Vitest 5.0.2</td><td>2.30 s</td><td>3.44 s</td><td>92.7 %</td></tr>
+              <tr><td>Vitest 5.0.2, <code>--no-isolate</code></td><td>1.86 s</td><td>&ndash;</td><td>&ndash;</td></tr>
+              <tr><td>Jest 30.5</td><td>4.91 s</td><td>6.59 s</td><td>92.6 %</td></tr>
             </tbody>
           </table>
         </div>
@@ -101,27 +225,26 @@
 
         <h2 id="backend">A backend suite</h2>
         <p>
-          A private Express and MongoDB backend: 79 files, 1,218 tests, 38 <code>jest.mock()</code> calls, an in-memory
-          MongoDB for every end-to-end file, Jest 30 with the project's own settings (<code>--maxWorkers=4</code>). The
-          tests ran unchanged, and every runner passes all of them.
+          A private Express and MongoDB backend: 79 files, 1,218 tests, 38 <code>jest.mock()</code> calls, end-to-end
+          files that each bootstrap the app against an in-memory MongoDB, Jest 30 with the project's own settings
+          (<code>--maxWorkers=4</code>). Both runners run the same files, and both pass all of them.
         </p>
         <div class="charts">
           <div class="chart">
             <h3>Whole suite</h3>
-            <p class="subtitle">Seconds, median of 2 runs after a warm-up. Less is better.</p>
-            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 33.9%"></span></span><span class="value">81.8 s</span></div>
-            <div class="chart-row us"><span class="name">vyntra, 4 workers</span><span class="track"><span class="fill" style="width: 34%"></span></span><span class="value">82.1 s</span></div>
-            <div class="chart-row"><span class="name">Jest, 4 workers</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">241.2 s</span></div>
+            <p class="subtitle">Seconds, median of 3 runs after a warm-up, the runners taking turns. Less is better.</p>
+            <div class="chart-row us"><span class="name">vyntra</span><span class="track"><span class="fill" style="width: 8.8%"></span></span><span class="value">17.9 s</span></div>
+            <div class="chart-row us"><span class="name">vyntra, 4 workers</span><span class="track"><span class="fill" style="width: 9.7%"></span></span><span class="value">19.8 s</span></div>
+            <div class="chart-row"><span class="name">Jest, 4 workers</span><span class="track"><span class="fill" style="width: 100%"></span></span><span class="value">204.5 s</span></div>
           </div>
         </div>
-        <p>
-          With the same number of workers, vyntra takes a third of the time. Its run is as long as its slowest file, a
-          file of 114 end-to-end tests that takes about 75 seconds by itself: the other 78 files run next to it.
-        </p>
         <div class="callout">
           <p>
-            Once a run is as long as its slowest file, the test code is what is left to make faster. On this suite,
-            replacing fixed <code>sleep()</code> calls by waiting for the database took the run from 82 to 44 seconds.
+            Part of this gap is the application, not the runner. Jest sets <code>NODE_ENV=test</code> when it is not set;
+            vyntra leaves the environment as it is. With <code>NODE_ENV=test</code> this app mounts its API documentation
+            on every start, scanning the project's files, and every end-to-end file starts the app: run that way, vyntra
+            took between 90 and 135 seconds in our runs, still faster than Jest but by far less. The figures above are each runner as it
+            comes, with nothing set.
           </p>
         </div>
 
@@ -131,7 +254,7 @@
           <table>
             <thead><tr><th>Cost</th><th>Jest</th><th>Vitest</th><th>vyntra</th></tr></thead>
             <tbody>
-              <tr><td>Transforming files</td><td>Babel, for every file</td><td>Vite, for every file</td><td>None: Node.js loads them (types stripped by Node.js)</td></tr>
+              <tr><td>Transforming files</td><td>Babel, for every file</td><td>Vite, for every file</td><td>Only what Node.js can not run (decorators, JSX, what the project's Jest <code>transform</code> asks for), kept on disk between runs</td></tr>
               <tr><td>Loading dependencies</td><td>Again for every test file</td><td>Again for every file, by default</td><td>Once per worker, kept between files</td></tr>
               <tr><td>Resolving <code>require()</code></td><td>Its own resolver</td><td>Vite's resolver</td><td>Cached between runs</td></tr>
               <tr><td>Starting workers</td><td>A process per worker</td><td>A thread per file, by default</td><td>A thread per worker, as few as needed</td></tr>
@@ -144,15 +267,19 @@
         <p>
           The start-up of vyntra itself is about 5 ms over starting Node.js. On large projects the biggest cost left is
           loading dependencies: a backend can load thousands of modules, and resolving each <code>require()</code> probes
-          the file system many times. vyntra keeps where it found each of them, and V8's compiled code, in
-          <code>node_modules/.cache/vyntra</code>, which halves that time on the runs after the first.
+          the file system many times, and Node.js looks for the nearest <code>package.json</code> of every file it loads.
+          vyntra keeps where it found each module in <code>node_modules/.cache/vyntra</code> between runs, and the answers
+          about the project's own files in memory for the whole run.
         </p>
 
         <h2 id="method">How it was measured</h2>
         <ul>
           <li>Windows 11, Intel Core i7-13700H (6 performance and 8 efficiency cores), Node.js 22.21.</li>
-          <li>vyntra 0.1, Vitest 5.0.3 (with <code>@vitest/coverage-v8</code>), Jest 30.2.</li>
-          <li>Each command ran once to warm the disk cache, then 7 times (the library) or 2 times (the backend); the median is shown.</li>
+          <li>vyntra 0.3; Vitest 5.0.2 with <code>@vitest/coverage-v8</code> (the library) and the versions the projects pin: Vitest 5.0.2 (NestJS), Jest 30.5 (the library), Jest 30.2 (the backend), Jest 29.6 (Strapi), Jest 29.2.1 (Yarn).</li>
+          <li>Every command ran once to warm the disk cache, then 7 times (the library), 5 times (NestJS, Yarn), 3 rounds (Strapi) or 3 times (the backend), the runners taking turns so that a slower moment of the machine weighs on all of them; the median is shown.</li>
+          <li>All the numbers were measured on the same day, 2 October 2026, with the same machine.</li>
+          <li>Each runner ran as it comes, with nothing set: Jest and Vitest set <code>NODE_ENV=test</code> when it is not set, vyntra does not (see the backend suite).</li>
+          <li>NestJS ran as <code>npx vitest run</code> and <code>node path/to/vyntra/bin/vyntra.js</code>, both with the <code>NODE_PATH</code> pnpm's launcher sets; Yarn as <code>yarn jest</code> and <code>yarn node path/to/vyntra/bin/vyntra.js</code>; each Strapi package as <code>node node_modules/jest/bin/jest.js</code> (what its <code>test:unit</code> script runs) and <code>vyntra --config jest.config.js --pool forks</code>, from the package's directory.</li>
           <li>Vitest ran with <code>globals: true</code> and a setup file with <code>globalThis.jest = vi</code>, so the Jest tests ran unchanged.</li>
           <li>vyntra ran with its defaults: it chose the number of workers from the previous run.</li>
         </ul>

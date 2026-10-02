@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Module = require('node:module');
 const state = require('./state');
+const { handles, compileWithJest } = require('./jest-transform');
 
 const NODE_MODULES = `${path.sep}node_modules${path.sep}`;
 const UNKNOWN = Symbol('unknown');
@@ -58,6 +59,10 @@ function installCjsLoader() {
   state.cjsLoader = true;
   const loadJs = Module._extensions['.js'];
   Module._extensions['.js'] = function vyntraLoadJs(module, filename) {
+    // A file the project's Jest transformer compiles, whatever loads it.
+    if (handles(filename)) {
+      return compileWithJest(module, filename);
+    }
     if (state.loaderHooks || !filename.endsWith('.js')) {
       return loadJs.call(this, module, filename);
     }
@@ -71,4 +76,4 @@ function installCjsLoader() {
   };
 }
 
-module.exports = { installCjsLoader };
+module.exports = { installCjsLoader, nearestType };
