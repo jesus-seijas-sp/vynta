@@ -1,4 +1,5 @@
 const { formatTitle, normalizeTable } = require('../src/collect/each');
+const { parseCli } = require('../src/cli/args');
 const { globToRegExp } = require('../src/cli/glob');
 const { diffLines } = require('../src/expect/diff');
 const { format } = require('../src/expect/format');
@@ -87,5 +88,19 @@ describe('looksLikeJsx', () => {
     expect(looksLikeJsx('const b = `<strong>${name}</strong>`;')).toBe(false);
     expect(looksLikeJsx(['// returns <div> markup', 'const c = 1;'].join('\n'))).toBe(false);
     expect(looksLikeJsx("res.send('Not found <script>x</script>');")).toBe(false);
+  });
+});
+
+describe('parseCli', () => {
+  it('takes the coverage directory, in the flag of Jest or of vitest', () => {
+    expect(parseCli(['--coverage', '--coverageDirectory', 'out/cov']).options).toMatchObject({
+      coverage: true,
+      coverageDirectory: 'out/cov',
+    });
+    expect(parseCli(['--coverage.reportsDirectory=reports']).options.coverageDirectory).toBe('reports');
+  });
+
+  it('does not take the directory for a path pattern', () => {
+    expect(parseCli(['--coverageDirectory', 'out/cov', 'src/']).patterns).toEqual(['src/']);
   });
 });

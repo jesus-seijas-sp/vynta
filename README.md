@@ -80,6 +80,7 @@ coverage of files no test loads.
     --passWithNoTests          Do not fail when no test files are found
 -u, --update                   Update snapshots
     --coverage                 Report the coverage of the project files (V8)
+    --coverageDirectory <dir>  Where coverage reports go (default: coverage; vitest's --coverage.reportsDirectory too)
     --ci                       Do not write new snapshots
 ```
 

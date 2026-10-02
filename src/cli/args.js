@@ -24,6 +24,8 @@ const OPTIONS = {
   help: { type: 'boolean', short: 'h' },
   version: { type: 'boolean', short: 'v' },
   coverage: { type: 'boolean' },
+  coverageDirectory: { type: 'string' },
+  'coverage.reportsDirectory': { type: 'string' },
   splitFiles: { type: 'boolean' },
   ci: { type: 'boolean' },
   watch: { type: 'boolean' },
@@ -49,6 +51,7 @@ Options:
       --passWithNoTests          Do not fail when no test files are found
   -u, --update                   Update snapshots
       --coverage                 Report the coverage of the project files (V8)
+      --coverageDirectory <dir>  Where coverage reports go (default: coverage; vitest's --coverage.reportsDirectory too)
       --splitFiles               Run long files in parts on several workers (their tests must be independent)
       --ci                       Do not write new snapshots
   -h, --help                     Show this help
@@ -74,6 +77,7 @@ function parseCli(argv) {
     passWithNoTests: values.passWithNoTests,
     update: values.update,
     coverage: values.coverage,
+    coverageDirectory: values.coverageDirectory ?? values['coverage.reportsDirectory'],
     splitFiles: values.splitFiles,
     ci: values.ci,
     isolate: values['no-isolate'] ? false : values.isolate,
