@@ -32,7 +32,7 @@ function captureConsole(silent) {
       const { file, test } = state;
       if (!file) {
         original(...args);
-      } else if (!silent) {
+      } else if (silent !== true) {
         const text = type === 'dir' ? util.inspect(args[0], args[1]) : util.format(...args);
         file.console.push({ type, test: test?.fullName, text });
       }

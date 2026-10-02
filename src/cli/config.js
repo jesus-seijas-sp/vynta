@@ -27,6 +27,7 @@ const DEFAULTS = {
   // Megabytes of heap after which a worker is replaced by a fresh one (0: never).
   workerMemoryLimit: 1024,
   maxWorkers: undefined,
+  // true drops the console output of tests; 'passed-only' (as in vitest) keeps that of failing tests.
   silent: false,
   retry: 0,
   maxConcurrency: 5,

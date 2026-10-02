@@ -44,8 +44,14 @@ class Reporter {
     this.write(`\n ${c.bold(c.cyan('VYNTRA'))} ${c.dim(`running ${fileCount} test files on ${mode}`)}\n`);
   }
 
-  printConsole(result) {
-    result.console.forEach(({ type, test, text }) => {
+  // silent: 'passed-only' (as in vitest) keeps the output of failing tests only, and of a failing file outside them.
+  printConsole(result, broken) {
+    const failed = new Set(result.tests.filter((entry) => entry.status === 'failed').map((entry) => entry.name));
+    const shown =
+      this.config.silent === 'passed-only'
+        ? result.console.filter(({ test }) => (test ? failed.has(test) : broken))
+        : result.console;
+    shown.forEach(({ type, test, text }) => {
       const where = [this.relative(result.path), test].filter(Boolean).join(' > ');
       const stream = type === 'error' || type === 'warn' ? 'stderr' : 'stdout';
       this.write(c.dim(`${stream} | ${where}`));
@@ -55,9 +61,9 @@ class Reporter {
 
   onFileResult(result) {
     this.results.push(result);
-    this.printConsole(result);
     const failed = result.tests.filter((test) => test.status === 'failed');
     const broken = failed.length > 0 || result.errors.length > 0;
+    this.printConsole(result, broken);
     const counts = failed.length > 0 ? ` | ${c.red(`${failed.length} failed`)}` : '';
     const icon = broken ? c.red('❯') : c.green('✓');
     this.write(

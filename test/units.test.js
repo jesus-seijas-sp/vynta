@@ -1,5 +1,6 @@
 const { formatTitle, normalizeTable } = require('../src/collect/each');
 const { parseCli } = require('../src/cli/args');
+const { Reporter } = require('../src/cli/reporter');
 const { globToRegExp } = require('../src/cli/glob');
 const { diffLines } = require('../src/expect/diff');
 const { format } = require('../src/expect/format');
@@ -102,5 +103,43 @@ describe('parseCli', () => {
 
   it('does not take the directory for a path pattern', () => {
     expect(parseCli(['--coverageDirectory', 'out/cov', 'src/']).patterns).toEqual(['src/']);
+  });
+});
+
+describe('console output of a file', () => {
+  const result = {
+    path: '/project/a.test.js',
+    errors: [],
+    tests: [
+      { name: 'passes', status: 'passed' },
+      { name: 'fails', status: 'failed' },
+    ],
+    console: [
+      { type: 'log', test: 'passes', text: 'FROM-PASSING' },
+      { type: 'log', test: 'fails', text: 'FROM-FAILING' },
+    ],
+  };
+  const printed = (silent) => {
+    let text = '';
+    const reporter = new Reporter(
+      { rootDir: '/project', silent, colors: false },
+      {
+        write: (chunk) => {
+          text += chunk;
+        },
+      }
+    );
+    reporter.printConsole(result, true);
+    return text;
+  };
+
+  it('is printed for every test by default', () => {
+    expect(printed(false)).toContain('FROM-PASSING');
+    expect(printed(false)).toContain('FROM-FAILING');
+  });
+
+  it("is only printed for failing tests with silent: 'passed-only', as in vitest", () => {
+    expect(printed('passed-only')).not.toContain('FROM-PASSING');
+    expect(printed('passed-only')).toContain('FROM-FAILING');
   });
 });
